@@ -4,32 +4,36 @@ const path = require('path')
 
 async function readBooks () {
   let files = fs.readdirSync('./books').filter(file => file.slice(-4) === '.txt')
-  console.log(files)
+  console.log(`Found ${files.length} Files`)
   for (let file of files) {
+    console.log(`Reading File - ${file}`)
     const filePath = path.join('./books', file)
-    const { title, author, lines } = parseBookFile(filePath)
-    await insertBookData(title, author, lines)
+    const { title, author, sections } = parseBookFile(filePath)
+    // await insertBookData(title, author, sections)
+    await bulkIndex(title, author, sections)
   }
 }
 
 function parseBookFile (filePath) {
-  const data = fs.readFileSync(filePath, 'utf8')
-  const title = data.match(/^Title:\s(.+)$/m)[1]
-  const author = data.match(/^Author:\s(.+)$/m)[1]
+  const book = fs.readFileSync(filePath, 'utf8')
+  const title = book.match(/^Title:\s(.+)$/m)[1]
+  let authorMatch = book.match(/^Author:\s(.+)$/m)
+  const author = (!authorMatch || authorMatch[1].trim() === '') ? 'Unknown Author' : authorMatch[1]
+
   console.log(`Reading Book - ${title} By ${author}`)
 
-  const startOfBookMatch = data.match(/^\*{3}\sSTART OF THIS PROJECT GUTENBERG EBOOK.+\*{3}$/m)
+  const startOfBookMatch = book.match(/^\*{3}\s*START OF (THIS|THE) PROJECT GUTENBERG EBOOK.+\*{3}$/m)
   const startOfBookIndex = startOfBookMatch.index + startOfBookMatch[0].length
-  const endOfBookIndex = data.match(/^\*{3}\sEND OF THIS PROJECT GUTENBERG EBOOK.+\*{3}$/m).index
+  const endOfBookIndex = book.match(/^\*{3}\s*END OF (THIS|THE) PROJECT GUTENBERG EBOOK.+\*{3}$/m).index
 
-  const lines = data
+  const sections = book
     .slice(startOfBookIndex, endOfBookIndex) // Remove Guttenberg header and footer
     .split(/\n\s+\n/g) // Split each paragraph into it's own array entry
-    .map(line => line.replace(/\r\n/g, ' ')) // Remove paragraph line breaks
-    .map(line => line.trim()) // Trim whitespace
-    .filter((line) => (line && line !== '')) // Remove empty lines
+    .map(line => line.replace(/\r\n/g, ' ').trim()) // Remove paragraph line breaks and whitespace
+    .filter((line) => (line && line.length !== '')) // Remove empty lines
 
-  return { title, author, lines }
+  console.log(`Parsed ${sections.length} Lines\n`)
+  return { title, author, sections }
 }
 
 async function resetIndex () {
@@ -49,8 +53,8 @@ async function resetIndex () {
   await client.indices.putMapping({ index, type, body: { properties: schema } })
 }
 
-async function insertBookData (title, author, lines) {
-  for (let i = 0; i < lines.length; i++) {
+async function insertBookData (title, author, sections) {
+  for (let i = 0; i < sections.length; i++) {
     await client.index({
       index,
       type,
@@ -58,10 +62,28 @@ async function insertBookData (title, author, lines) {
         Author: author,
         Title: title,
         Paragraph: i,
-        Text: lines[i]
+        Text: sections[i]
       }
     })
   }
+}
+
+async function bulkIndex (title, author, sections) {
+  const bulkOps = []
+  for (let i = 0; i < sections.length; i++) {
+    // Describe action
+    bulkOps.push({ index: { _index: index, _type: type } })
+
+    // Describe document
+    bulkOps.push({
+      Author: author,
+      Title: title,
+      Paragraph: i,
+      Text: sections[i]
+    })
+  }
+
+  await client.bulk({ body: bulkOps })
 }
 
 async function main () {
