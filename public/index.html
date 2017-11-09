@@ -8,18 +8,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <link href="https://cdn.muicss.com/mui-0.9.20/css/mui.min.css" rel="stylesheet" />
   <style>
+    .app-container { padding: 16px; }
+
     .book-modal {
-      width: 80%;
+      width: 100%;
       height: 100%;
       padding: 40px 10%;
       box-sizing: border-box;
       margin: 0 auto;
       background-color: white;
       overflow-y: scroll;
+      position: relative;
     }
 
-    .search-results > div {
-      cursor: pointer;
+    .book-modal > button { width: 100%; }
+    .search-results > div { cursor: pointer; }
+
+    .pagination-panel {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .modal-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-around;
+      background: white;
     }
   </style>
 </head>
@@ -32,16 +49,31 @@
           <label>Search Library</label>
         </div>
       </div>
-      <p class="mui--text-headline">{{ numHits }} Hits</p>
+      <div class="mui-panel">
+        <div class="mui--text-headline">{{ numHits }} Hits</div>
+        <div class="mui--text-subhead">Displaying Results {{ offset }} - {{ offset + 10 }}</div>
+      </div>
+      <div class="mui-panel pagination-panel">
+          <button class="mui-btn" v-on:click="prevResultsPage()">Back</button>
+          <button class="mui-btn" v-on:click="nextResultsPage()">Forward</button>
+      </div>
       <div class="search-results">
         <div class="mui-panel" v-for="hit in hits" v-on:click="showBookModal(hit)">
           <div class="mui--text-title" v-html="hit.highlight.Text[0]"></div>
+          <br>
+          <div class="mui-divider"></div>
+          <br>
           <div class="mui--text-subhead">{{ hit._source.Title }} - {{ hit._source.Author }}</div>
           <div class="mui--text-caption">Location {{ hit._source.Paragraph }}</div>
         </div>
       </div>
+      <div class="mui-panel pagination-panel">
+          <button class="mui-btn" v-on:click="prevResultsPage()">Back</button>
+          <button class="mui-btn" v-on:click="nextResultsPage()">Forward</button>
+      </div>
       <div v-if="selectedParagraph" ref="bookModal" class="book-modal">
         <div class="mui--text-headline">{{ selectedParagraph._source.Title }} - {{ selectedParagraph._source.Author }}</div>
+        <div class="mui--text-subhead">Location {{ startParagraph }} to {{ endParagraph }}</div>
         <div class="mui-divider"></div>
         <br>
         <div v-for="paragraph in paragraphs">
@@ -52,6 +84,11 @@
             {{ paragraph._source.Text }}
           </div>
           <br>
+        </div>
+        <div class="modal-footer">
+          <button class="mui-btn" v-on:click="prevBookPage()">Back</button>
+          <button class="mui-btn" v-on:click="closeBookModal()">Close</button>
+          <button class="mui-btn" v-on:click="nextBookPage()">Forward</button>
         </div>
       </div>
   </div>
@@ -70,39 +107,67 @@ const vm = new Vue ({
       hits: [],
       paragraphs: [],
       selectedParagraph: null,
-      searchTerm: null,
+      searchTerm: "Hello World",
+      offset: 0,
       searchDebounce: null,
-      baseUrl: 'http://localhost:3000'
+      baseUrl: 'http://localhost:3000',
     }
   },
-  async created () {
-    this.search('test')
+  created () {
+    this.search()
   },
   methods: {
-    async search (term) {
-      const response = await axios.get(`${this.baseUrl}/search`, { params: { term } })
+    async search () {
+      const response = await axios.get(`${this.baseUrl}/search`, { params: { term: this.searchTerm, offset: this.offset } })
       const data = response.data
       this.numHits = data.hits.total
       this.hits = data.hits.hits
     },
     async getParagraphs (bookTitle, start, end) {
-      const response = await axios.get(`${this.baseUrl}/paragraphs`, { params: { bookTitle, start, end } })
-      return response.data.hits.hits
+      try {
+        this.startParagraph = start
+        this.endParagraph = end
+        const response = await axios.get(`${this.baseUrl}/paragraphs`, { params: { bookTitle, start, end } })
+        this.paragraphs = response.data.hits.hits
+      } catch (err) {
+        console.error(err)
+      }
+    },
+    async nextResultsPage () {
+      this.offset = this.offset + 10
+      if (this.offset + 10 > this.numHits) { this.offset = this.numHits - 10}
+      if (this.offset < 0) { this.offset = 0 }
+      this.search()
+    },
+    async prevResultsPage () {
+      this.offset = this.offset - 10
+      if (this.offset < 0) { this.offset = 0 }
+      this.search()
+    },
+    async prevBookPage () {
+      await this.getParagraphs(this.selectedParagraph._source.Title, this.startParagraph - 10, this.endParagraph - 10)
+    },
+    async nextBookPage () {
+      await this.getParagraphs(this.selectedParagraph._source.Title, this.startParagraph + 10, this.endParagraph + 10)
+    },
+    closeBookModal () {
+      mui.overlay('off', this.$refs.bookModal)
     },
     async showBookModal (searchHit) {
-      this.selectedParagraph = searchHit
-      this.paragraphs = await this.getParagraphs(searchHit._source.Title, searchHit._source.Paragraph - 5, searchHit._source.Paragraph + 5)
-
-      const options = { 'onclose': () => {
-        this.paragraphs = []
-        this.selectedParagraph = null
-      } }
-
-      mui.overlay('on', options, this.$refs.bookModal)
+      try {
+        this.selectedParagraph = searchHit
+        await this.getParagraphs(searchHit._source.Title, searchHit._source.Paragraph - 5, searchHit._source.Paragraph + 5)
+        mui.overlay('on', this.modalOptions, this.$refs.bookModal)
+      } catch (err) {
+        console.error(err)
+      }
     },
     onSearch () {
       clearTimeout(this.searchDebounce)
-      this.searchDebounce = setTimeout(() => this.search(this.searchTerm), 100)
+      this.searchDebounce = setTimeout(() => {
+        this.offset = 0
+        this.search()
+      }, 100)
     }
   }
 })
