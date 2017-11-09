@@ -6,7 +6,7 @@
   <title>Elastic Library</title>
   <meta name="description" content="Psuedo-random number generator authenticator app.">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <link href="https://cdn.muicss.com/mui-0.9.20/css/mui.min.css" rel="stylesheet" />
+  <link href="https://cdn.muicss.com/mui-0.9.20/css/mui.min.css" rel="stylesheet" type="text/css" />
   <style>
     .app-container { padding: 16px; }
 
@@ -21,8 +21,10 @@
       position: relative;
     }
 
+    .search-results em { font-weight: bold }
     .book-modal > button { width: 100%; }
     .search-results > div { cursor: pointer; }
+    .search-results .mui-divider { margin: 14px 0; }
 
     .pagination-panel {
       display: flex;
@@ -40,7 +42,6 @@
     }
   </style>
 </head>
-
 <body>
   <div class="app-container" id="vue-instance">
       <div class="mui-panel">
@@ -51,25 +52,23 @@
       </div>
       <div class="mui-panel">
         <div class="mui--text-headline">{{ numHits }} Hits</div>
-        <div class="mui--text-subhead">Displaying Results {{ offset }} - {{ offset + 10 }}</div>
+        <div class="mui--text-subhead">Displaying Results {{ offset + 1 }} - {{ offset + 10 }}</div>
       </div>
       <div class="mui-panel pagination-panel">
-          <button class="mui-btn" v-on:click="prevResultsPage()">Back</button>
-          <button class="mui-btn" v-on:click="nextResultsPage()">Forward</button>
+          <button class="mui-btn mui-btn--flat" v-on:click="prevResultsPage()">Previous Page</button>
+          <button class="mui-btn mui-btn--flat" v-on:click="nextResultsPage()">Next Page</button>
       </div>
       <div class="search-results">
         <div class="mui-panel" v-for="hit in hits" v-on:click="showBookModal(hit)">
           <div class="mui--text-title" v-html="hit.highlight.Text[0]"></div>
-          <br>
           <div class="mui-divider"></div>
-          <br>
           <div class="mui--text-subhead">{{ hit._source.Title }} - {{ hit._source.Author }}</div>
           <div class="mui--text-caption">Location {{ hit._source.Paragraph }}</div>
         </div>
       </div>
       <div class="mui-panel pagination-panel">
-          <button class="mui-btn" v-on:click="prevResultsPage()">Back</button>
-          <button class="mui-btn" v-on:click="nextResultsPage()">Forward</button>
+          <button class="mui-btn mui-btn--flat" v-on:click="prevResultsPage()">Previous Page</button>
+          <button class="mui-btn mui-btn--flat" v-on:click="nextResultsPage()">Next Page</button>
       </div>
       <div v-if="selectedParagraph" ref="bookModal" class="book-modal">
         <div class="mui--text-headline">{{ selectedParagraph._source.Title }} - {{ selectedParagraph._source.Author }}</div>
@@ -86,9 +85,9 @@
           <br>
         </div>
         <div class="modal-footer">
-          <button class="mui-btn" v-on:click="prevBookPage()">Back</button>
-          <button class="mui-btn" v-on:click="closeBookModal()">Close</button>
-          <button class="mui-btn" v-on:click="nextBookPage()">Forward</button>
+          <button class="mui-btn mui-btn--flat" v-on:click="prevBookPage()">Previous Page</button>
+          <button class="mui-btn mui-btn--flat" v-on:click="closeBookModal()">Close</button>
+          <button class="mui-btn mui-btn--flat" v-on:click="nextBookPage()">Next Page</button>
         </div>
       </div>
   </div>
@@ -96,7 +95,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.3/vue.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.17.0/axios.min.js"></script>
 </body>
-
 <script>
 const vm = new Vue ({
   el: '#vue-instance',
@@ -172,5 +170,4 @@ const vm = new Vue ({
   }
 })
 </script>
-
 </html>
