@@ -8,17 +8,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <link href="https://cdn.muicss.com/mui-0.9.20/css/mui.min.css" rel="stylesheet" />
   <style>
+    .book-modal {
+      width: 80%;
+      height: 100%;
+      padding: 40px 10%;
+      box-sizing: border-box;
+      margin: 0 auto;
+      background-color: white;
+      overflow-y: scroll;
+    }
 
+    .search-results > div {
+      cursor: pointer;
+    }
   </style>
 </head>
 
 <body>
   <div class="app-container" id="vue-instance">
-      <p>{{test}}</p>
+      <div class="mui-panel">
+        <div class="mui-textfield mui-textfield--float-label">
+          <input v-model="searchTerm" type="text" v-on:keyup="onSearch()">
+          <label>Search Library</label>
+        </div>
+      </div>
+      <p class="mui--text-headline">{{ numHits }} Hits</p>
+      <div class="search-results">
+        <div class="mui-panel" v-for="hit in hits" v-on:click="showBookModal(hit)">
+          <div class="mui--text-title" v-html="hit.highlight.Text[0]"></div>
+          <div class="mui--text-subhead">{{ hit._source.Title }} - {{ hit._source.Author }}</div>
+          <div class="mui--text-caption">Location {{ hit._source.Paragraph }}</div>
+        </div>
+      </div>
+      <div v-if="selectedParagraph" ref="bookModal" class="book-modal">
+        <div class="mui--text-headline">{{ selectedParagraph._source.Title }} - {{ selectedParagraph._source.Author }}</div>
+        <div class="mui-divider"></div>
+        <br>
+        <div v-for="paragraph in paragraphs">
+          <div v-if="paragraph._source.Paragraph === selectedParagraph._source.Paragraph" class="mui--text-body2">
+            <strong>{{ paragraph._source.Text }}</strong>
+          </div>
+          <div v-else class="mui--text-body1">
+            {{ paragraph._source.Text }}
+          </div>
+          <br>
+        </div>
+      </div>
   </div>
-  <script src="https://cdn.muicss.com/mui-0.9.20/js/mui.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.4.2/vue.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.16.2/axios.min.js"></script>
+  <script src="https://cdn.muicss.com/mui-0.9.28/js/mui.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.3/vue.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.17.0/axios.min.js"></script>
 </body>
 
 <script>
@@ -26,14 +65,45 @@ const vm = new Vue ({
   el: '#vue-instance',
   data () {
     return {
-      test: 'hello'
+      data: null,
+      numHits: null,
+      hits: [],
+      paragraphs: [],
+      selectedParagraph: null,
+      searchTerm: null,
+      searchDebounce: null,
+      baseUrl: 'http://localhost:3000'
     }
   },
   async created () {
-
+    this.search('test')
   },
   methods: {
+    async search (term) {
+      const response = await axios.get(`${this.baseUrl}/search`, { params: { term } })
+      const data = response.data
+      this.numHits = data.hits.total
+      this.hits = data.hits.hits
+    },
+    async getParagraphs (bookTitle, start, end) {
+      const response = await axios.get(`${this.baseUrl}/paragraphs`, { params: { bookTitle, start, end } })
+      return response.data.hits.hits
+    },
+    async showBookModal (searchHit) {
+      this.selectedParagraph = searchHit
+      this.paragraphs = await this.getParagraphs(searchHit._source.Title, searchHit._source.Paragraph - 5, searchHit._source.Paragraph + 5)
 
+      const options = { 'onclose': () => {
+        this.paragraphs = []
+        this.selectedParagraph = null
+      } }
+
+      mui.overlay('on', options, this.$refs.bookModal)
+    },
+    onSearch () {
+      clearTimeout(this.searchDebounce)
+      this.searchDebounce = setTimeout(() => this.search(this.searchTerm), 100)
+    }
   }
 })
 </script>
