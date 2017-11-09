@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Elastic Library</title>
+  <meta name="description" content="Psuedo-random number generator authenticator app.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <link href="https://cdn.muicss.com/mui-0.9.20/css/mui.min.css" rel="stylesheet" />
+  <style>
+
+  </style>
+</head>
+
+<body>
+  <div class="app-container" id="vue-instance">
+      <p>{{test}}</p>
+  </div>
+  <script src="https://cdn.muicss.com/mui-0.9.20/js/mui.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.4.2/vue.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.16.2/axios.min.js"></script>
+</body>
+
+<script>
+const vm = new Vue ({
+  el: '#vue-instance',
+  data () {
+    return {
+      test: 'hello'
+    }
+  },
+  async created () {
+
+  },
+  methods: {
+
+  }
+})
+</script>
+
+</html>
