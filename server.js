@@ -1,6 +1,10 @@
 const Koa = require('koa')
+const Router = require('koa-router')
+const joi = require('joi')
+const validate = require('koa-joi-validate')
 const sherlockSearch = require('./search')
 const app = new Koa()
+const router = new Router()
 
 app.use(async (ctx, next) => {
   const start = Date.now()
@@ -13,25 +17,41 @@ app.on('error', err => {
   console.error('Server Error', err)
 })
 
-app.use(async ctx => {
-  const term = ctx.request.query.term
-
-  if (!term) {
-    ctx.throw(400, 'Search Term Required')
-  }
-
-  const searchResponse = await sherlockSearch.search(term)
-
-  let template = '<!DOCTYPE html><html><head></head><body>'
-  for (let hit of searchResponse.hits.hits) {
-    template += `
-      <p>${hit._source.Author} - ${hit._source.Title} - Location ${hit._source.Paragraph}</p>
-      <p>${hit.highlight.Text}</p>
-      <br>
-    `
-  }
-  template += '</body></html>'
-  ctx.body = template
+app.use(async (ctx, next) => {
+  ctx.set('Access-Control-Allow-Origin', '*')
+  return next()
 })
 
-app.listen(3000)
+router.get('/search',
+  validate({
+    query: {
+      term: joi.string().max(30).required(),
+      offset: joi.number().integer().min(0).default(0)
+    }
+  }),
+  async (ctx, next) => {
+    const term = ctx.request.query.term
+    const searchResponse = await sherlockSearch.search(term, offset)
+    ctx.body = searchResponse
+  }
+)
+
+router.get('/paragraphs',
+  validate({
+    query: {
+      bookTitle: joi.string().max(256).required(),
+      start: joi.number().integer().min(0).default(0),
+      end: joi.number().integer().greater(joi.ref('start')).default(10)
+    }
+  }),
+  async (ctx, next) => {
+    const { bookTitle, start, end } = ctx.request.query
+    const searchResponse = await sherlockSearch.getParagraphs(bookTitle, start, end)
+    ctx.body = searchResponse
+  }
+)
+
+app
+.use(router.routes())
+.use(router.allowedMethods())
+.listen(3000)
