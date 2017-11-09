@@ -30,6 +30,7 @@ function parseBookFile (filePath) {
     .slice(startOfBookIndex, endOfBookIndex) // Remove Guttenberg header and footer
     .split(/\n\s+\n/g) // Split each paragraph into it's own array entry
     .map(line => line.replace(/\r\n/g, ' ').trim()) // Remove paragraph line breaks and whitespace
+    .map(line => line.replace('_', '')) // Guttenberg uses "_" to signify italics.  We'll remove it, since it make the raw text look messy.
     .filter((line) => (line && line.length !== '')) // Remove empty lines
 
   console.log(`Parsed ${sections.length} Lines\n`)
