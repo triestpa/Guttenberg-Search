@@ -19,6 +19,9 @@
   "homepage": "https://github.com/triestpa/elastic-sherlock#readme",
   "dependencies": {
     "elasticsearch": "13.3.1",
-    "koa": "2.4.1"
+    "joi": "13.0.1",
+    "koa": "2.4.1",
+    "koa-joi-validate": "0.5.1",
+    "koa-router": "7.2.1"
   }
 }
