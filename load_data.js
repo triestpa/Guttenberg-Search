@@ -10,7 +10,7 @@ async function readBooks () {
     const filePath = path.join('./books', file)
     const { title, author, sections } = parseBookFile(filePath)
     // await insertBookData(title, author, sections)
-    await bulkIndex(title, author, sections)
+    await insertBookData(title, author, sections)
   }
 }
 
@@ -54,27 +54,12 @@ async function resetIndex () {
 }
 
 async function insertBookData (title, author, sections) {
-  for (let i = 0; i < sections.length; i++) {
-    await client.index({
-      index,
-      type,
-      body: {
-        Author: author,
-        Title: title,
-        Paragraph: i,
-        Text: sections[i]
-      }
-    })
-  }
-}
-
-async function bulkIndex (title, author, sections) {
   const bulkOps = []
   for (let i = 0; i < sections.length; i++) {
     // Describe action
     bulkOps.push({ index: { _index: index, _type: type } })
 
-    // Describe document
+    // Add document
     bulkOps.push({
       Author: author,
       Title: title,
@@ -96,3 +81,20 @@ async function main () {
 }
 
 main()
+
+/*
+async function insertBookData (title, author, sections) {
+  for (let i = 0; i < sections.length; i++) {
+    await client.index({
+      index,
+      type,
+      body: {
+        Author: author,
+        Title: title,
+        Paragraph: i,
+        Text: sections[i]
+      }
+    })
+  }
+}
+*/
