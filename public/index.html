@@ -7,7 +7,8 @@
   <meta name="description" content="Psuedo-random number generator authenticator app.">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <link href="https://cdn.muicss.com/mui-0.9.20/css/mui.min.css" rel="stylesheet" type="text/css" />
-  <style>
+  <link href="https://fonts.googleapis.com/css?family=Cardo|Vollkorn+SC" rel="stylesheet">  <style>
+    body { font-family: 'Cardo', serif; }
     .app-container { padding: 16px; }
 
     .book-modal {
@@ -46,7 +47,7 @@
   <div class="app-container" id="vue-instance">
       <div class="mui-panel">
         <div class="mui-textfield mui-textfield--float-label">
-          <input v-model="searchTerm" type="text" v-on:keyup="onSearch()">
+          <input v-model="searchTerm" type="text" v-on:keyup="onSearchInput()">
           <label>Search Library</label>
         </div>
       </div>
@@ -55,7 +56,7 @@
         <div class="mui--text-subhead">Displaying Results {{ offset + 1 }} - {{ offset + 10 }}</div>
       </div>
       <div class="mui-panel pagination-panel">
-          <button class="mui-btn mui-btn--flat" v-on:click="prevResultsPage()">Previous Page</button>
+          <button class="mui-btn mui-btn--flat" v-on:click="prevResultsPage()">Prev Page</button>
           <button class="mui-btn mui-btn--flat" v-on:click="nextResultsPage()">Next Page</button>
       </div>
       <div class="search-results">
@@ -67,7 +68,7 @@
         </div>
       </div>
       <div class="mui-panel pagination-panel">
-          <button class="mui-btn mui-btn--flat" v-on:click="prevResultsPage()">Previous Page</button>
+          <button class="mui-btn mui-btn--flat" v-on:click="prevResultsPage()">Prev Page</button>
           <button class="mui-btn mui-btn--flat" v-on:click="nextResultsPage()">Next Page</button>
       </div>
       <div v-if="selectedParagraph" ref="bookModal" class="book-modal">
@@ -85,7 +86,7 @@
           <br>
         </div>
         <div class="modal-footer">
-          <button class="mui-btn mui-btn--flat" v-on:click="prevBookPage()">Previous Page</button>
+          <button class="mui-btn mui-btn--flat" v-on:click="prevBookPage()">Prev Page</button>
           <button class="mui-btn mui-btn--flat" v-on:click="closeBookModal()">Close</button>
           <button class="mui-btn mui-btn--flat" v-on:click="nextBookPage()">Next Page</button>
         </div>
@@ -115,6 +116,13 @@ const vm = new Vue ({
     this.search()
   },
   methods: {
+    onSearchInput () {
+      clearTimeout(this.searchDebounce)
+      this.searchDebounce = setTimeout(() => {
+        this.offset = 0
+        this.search()
+      }, 100)
+    },
     async search () {
       const response = await axios.get(`${this.baseUrl}/search`, { params: { term: this.searchTerm, offset: this.offset } })
       const data = response.data
@@ -148,9 +156,6 @@ const vm = new Vue ({
     async nextBookPage () {
       await this.getParagraphs(this.selectedParagraph._source.Title, this.startParagraph + 10, this.endParagraph + 10)
     },
-    closeBookModal () {
-      mui.overlay('off', this.$refs.bookModal)
-    },
     async showBookModal (searchHit) {
       try {
         this.selectedParagraph = searchHit
@@ -160,12 +165,8 @@ const vm = new Vue ({
         console.error(err)
       }
     },
-    onSearch () {
-      clearTimeout(this.searchDebounce)
-      this.searchDebounce = setTimeout(() => {
-        this.offset = 0
-        this.search()
-      }, 100)
+    closeBookModal () {
+      mui.overlay('off', this.$refs.bookModal)
     }
   }
 })
