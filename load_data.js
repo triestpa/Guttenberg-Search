@@ -17,7 +17,7 @@ async function readBooks () {
 function parseBookFile (filePath) {
   const book = fs.readFileSync(filePath, 'utf8')
   const title = book.match(/^Title:\s(.+)$/m)[1]
-  let authorMatch = book.match(/^Author:\s(.+)$/m)
+  const authorMatch = book.match(/^Author:\s(.+)$/m)
   const author = (!authorMatch || authorMatch[1].trim() === '') ? 'Unknown Author' : authorMatch[1]
 
   console.log(`Reading Book - ${title} By ${author}`)
@@ -30,7 +30,7 @@ function parseBookFile (filePath) {
     .slice(startOfBookIndex, endOfBookIndex) // Remove Guttenberg header and footer
     .split(/\n\s+\n/g) // Split each paragraph into it's own array entry
     .map(line => line.replace(/\r\n/g, ' ').trim()) // Remove paragraph line breaks and whitespace
-    .map(line => line.replace('_', '')) // Guttenberg uses "_" to signify italics.  We'll remove it, since it make the raw text look messy.
+    .map(line => line.replace(/_/g, '')) // Guttenberg uses "_" to signify italics.  We'll remove it, since it make the raw text look messy.
     .filter((line) => (line && line.length !== '')) // Remove empty lines
 
   console.log(`Parsed ${sections.length} Lines\n`)
