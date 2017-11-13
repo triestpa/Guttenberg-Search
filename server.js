@@ -30,7 +30,7 @@ router.get('/search',
     }
   }),
   async (ctx, next) => {
-    const term = ctx.request.query.term
+    const { term, offset } = ctx.request.query
     const searchResponse = await sherlockSearch.search(term, offset)
     ctx.body = searchResponse
   }
