@@ -9,6 +9,6 @@ client.cluster.health({}).then(console.log).catch(console.error)
 
 module.exports = {
   client,
-  index: 'sherlock',
+  index: 'library',
   type: 'novel'
 }
