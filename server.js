@@ -6,6 +6,7 @@ const sherlockSearch = require('./search')
 const app = new Koa()
 const router = new Router()
 
+// Log each request to the console
 app.use(async (ctx, next) => {
   const start = Date.now()
   await next()
@@ -13,29 +14,45 @@ app.use(async (ctx, next) => {
   console.log(`${ctx.method} ${ctx.url} - ${ms}`)
 })
 
+// Log percolated errors to the console
 app.on('error', err => {
   console.error('Server Error', err)
 })
 
+// Set permissive CORS header
 app.use(async (ctx, next) => {
   ctx.set('Access-Control-Allow-Origin', '*')
   return next()
 })
 
+/**
+ * GET /search
+ * Search for a term in the library
+ * Query Params -
+ * term: string under 60 characters
+ * offset: positive integer
+ */
 router.get('/search',
-  validate({
+  validate({ //
     query: {
-      term: joi.string().max(30).required(),
+      term: joi.string().max(60).required(),
       offset: joi.number().integer().min(0).default(0)
     }
   }),
   async (ctx, next) => {
     const { term, offset } = ctx.request.query
-    const searchResponse = await sherlockSearch.search(term, offset)
-    ctx.body = searchResponse
+    ctx.body = await sherlockSearch.search(term, offset)
   }
 )
 
+/**
+ * GET /paragraphs
+ * Get a range of paragraphs from the specified book
+ * Query Params -
+ * bookTitle: string under 256 characters
+ * start: positive integer
+ * end: positive integer greater than start
+ */
 router.get('/paragraphs',
   validate({
     query: {
@@ -46,12 +63,11 @@ router.get('/paragraphs',
   }),
   async (ctx, next) => {
     const { bookTitle, start, end } = ctx.request.query
-    const searchResponse = await sherlockSearch.getParagraphs(bookTitle, start, end)
-    ctx.body = searchResponse
+    ctx.body = await sherlockSearch.getParagraphs(bookTitle, start, end)
   }
 )
 
 app
-.use(router.routes())
-.use(router.allowedMethods())
-.listen(3000)
+  .use(router.routes())
+  .use(router.allowedMethods())
+  .listen(3000)

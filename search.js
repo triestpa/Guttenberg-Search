@@ -1,37 +1,33 @@
 const { client, index, type } = require('./connection')
 
 module.exports = {
-  async search (term, offset = 0) {
-    const result = await client.search({
-      index,
-      type,
-      body: {
-        from: offset,
-        query: { match: { 'Text': term } },
-        highlight: { fields: { Text: {} } }
-      }
-    })
+  /** Query ES index for the provided term */
+  search (term, offset = 0) {
+    const body = {
+      from: offset,
+      query: { match: { 'Text': term } },
+      highlight: { fields: { Text: {} } }
+    }
 
-    return result
+    return client.search({ index, type, body })
   },
-  async getParagraphs (bookTitle, startLocation, endLocation) {
-    const result = await client.search({
-      index,
-      type,
-      body: {
-        size: endLocation - startLocation,
-        sort: { 'Paragraph': 'asc' },
-        query: {
-          bool: {
-            filter: [
-              { term: { 'Title': bookTitle } },
-              { range: { 'Paragraph': { gte: startLocation, lte: endLocation } } }
-            ]
-          }
-        }
-      }
-    })
 
-    return result
+  /** Get the specified range of paragraphs from a book */
+  getParagraphs (bookTitle, startLocation, endLocation) {
+    const filter = [
+      { term: { 'Title': bookTitle } },
+      { range: { 'Paragraph': { gte: startLocation, lte: endLocation } } }
+    ]
+
+    const body = {
+      size: endLocation - startLocation,
+      sort: { 'Paragraph': 'asc' },
+      query: { bool: { filter } }
+    }
+
+    body.sort = { 'Paragraph': 'asc' }
+    body.size = endLocation - startLocation
+
+    return client.search({ index, type, body })
   }
 }

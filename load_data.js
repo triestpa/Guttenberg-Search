@@ -2,6 +2,7 @@ const { client, index, type } = require('./connection')
 const fs = require('fs')
 const path = require('path')
 
+/** Parse and index all txt files in data directory */
 async function readBooks () {
   let files = fs.readdirSync('./books').filter(file => file.slice(-4) === '.txt')
   console.log(`Found ${files.length} Files`)
@@ -9,11 +10,11 @@ async function readBooks () {
     console.log(`Reading File - ${file}`)
     const filePath = path.join('./books', file)
     const { title, author, sections } = parseBookFile(filePath)
-    // await insertBookData(title, author, sections)
     await insertBookData(title, author, sections)
   }
 }
 
+/** Read an individual book txt file, and extract the title, author, and sections */
 function parseBookFile (filePath) {
   const book = fs.readFileSync(filePath, 'utf8')
   const title = book.match(/^Title:\s(.+)$/m)[1]
@@ -30,15 +31,18 @@ function parseBookFile (filePath) {
     .slice(startOfBookIndex, endOfBookIndex) // Remove Guttenberg header and footer
     .split(/\n\s+\n/g) // Split each paragraph into it's own array entry
     .map(line => line.replace(/\r\n/g, ' ').trim()) // Remove paragraph line breaks and whitespace
-    .map(line => line.replace(/_/g, '')) // Guttenberg uses "_" to signify italics.  We'll remove it, since it make the raw text look messy.
+    .map(line => line.replace(/_/g, '')) // Guttenberg uses "_" to signify italics.  We'll remove it, since it makes the raw text look messy.
     .filter((line) => (line && line.length !== '')) // Remove empty lines
 
   console.log(`Parsed ${sections.length} Lines\n`)
   return { title, author, sections }
 }
 
+/** Bulk index the book data in ElasticSearch */
 async function insertBookData (title, author, sections) {
-  const bulkOps = []
+  const bulkOps = [] // Array to store bulk operations
+
+  // Add an index operation for each section in the book
   for (let i = 0; i < sections.length; i++) {
     // Describe action
     bulkOps.push({ index: { _index: index, _type: type } })
@@ -52,9 +56,11 @@ async function insertBookData (title, author, sections) {
     })
   }
 
+  // Execute bulk ops array
   await client.bulk({ body: bulkOps })
 }
 
+/** Clear ES index and insert books from filesystem */
 async function main () {
   try {
     await client.resetIndex()
@@ -65,20 +71,3 @@ async function main () {
 }
 
 main()
-
-/*
-async function insertBookData (title, author, sections) {
-  for (let i = 0; i < sections.length; i++) {
-    await client.index({
-      index,
-      type,
-      body: {
-        Author: author,
-        Title: title,
-        Paragraph: i,
-        Text: sections[i]
-      }
-    })
-  }
-}
-*/
