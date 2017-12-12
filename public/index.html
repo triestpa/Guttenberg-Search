@@ -3,78 +3,28 @@
 <head>
   <meta charset="utf-8">
   <title>Elastic Library</title>
-  <meta name="description" content="Psuedo-random number generator authenticator app.">
+  <meta name="description" content="Literary Classic Search Engine.">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.min.css" rel="stylesheet" type="text/css" />
   <link href="https://cdn.muicss.com/mui-0.9.20/css/mui.min.css" rel="stylesheet" type="text/css" />
-  <link href="https://fonts.googleapis.com/css?family=Cardo|Open+Sans" rel="stylesheet">
-  <style>
-    body { font-family: 'Cardo', serif; }
-
-    .app-container { padding: 16px; }
-    .search-results em { font-weight: bold }
-    .book-modal > button { width: 100%; }
-    .search-results > div { cursor: pointer; }
-    .search-results .mui-divider { margin: 14px 0; }
-
-    .paragraphs-container {
-      max-width: 800px;
-      margin: 0 auto;
-      margin-bottom: 48px;
-    }
-
-    .mui-textfield > input,
-    .mui-btn,
-    /* .mui--text-subhead, */
-    /* .mui--text-caption, */
-    .mui-panel > .mui--text-headline {
-      font-family: 'Open Sans', sans-serif;
-    }
-
-    .book-modal {
-      width: 100%;
-      height: 100%;
-      padding: 40px 10%;
-      box-sizing: border-box;
-      margin: 0 auto;
-      background-color: white;
-      overflow-y: scroll;
-      position: fixed;
-      top: 0;
-      left: 0;
-    }
-
-    .pagination-panel {
-      display: flex;
-      justify-content: space-between;
-    }
-
-    .modal-footer {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      display: flex;
-      justify-content: space-around;
-      background: white;
-    }
-  </style>
+  <link href="https://fonts.googleapis.com/css?family=Cardo|Open+Sans" rel="stylesheet" />
+  <link href="/styles.css" rel="stylesheet" />
 </head>
 <body>
   <div class="app-container" id="vue-instance">
 
       <!-- Search Bar Header -->
       <div class="mui-panel">
-        <div class="mui-textfield mui-textfield--float-label">
+        <div class="mui-textfield">
           <input v-model="searchTerm" type="text" v-on:keyup="onSearchInput()">
-          <label>Search Library</label>
+          <label>Search</label>
         </div>
       </div>
 
       <!-- Search Metadata Card -->
       <div class="mui-panel">
         <div class="mui--text-headline">{{ numHits }} Hits</div>
-        <div class="mui--text-subhead">Displaying Results {{ offset + 1 }} - {{ offset + 10 }}</div>
+        <div class="mui--text-subhead">Displaying Results {{ searchOffset }} - {{ searchOffset + 9 }}</div>
       </div>
 
       <!-- Top Pagination Card -->
@@ -84,12 +34,12 @@
       </div>
 
       <!-- Search Results Card List -->
-      <div class="search-results">
+      <div class="search-results" ref="searchResults">
         <div class="mui-panel" v-for="hit in searchResults" v-on:click="showBookModal(hit)">
-          <div class="mui--text-title" v-html="hit.highlight.Text[0]"></div>
+          <div class="mui--text-title" v-html="hit.highlight.text[0]"></div>
           <div class="mui-divider"></div>
-          <div class="mui--text-subhead">{{ hit._source.Title }} - {{ hit._source.Author }}</div>
-          <div class="mui--text-caption">Location {{ hit._source.Paragraph }}</div>
+          <div class="mui--text-subhead">{{ hit._source.title }} - {{ hit._source.author }}</div>
+          <div class="mui--text-caption">Location {{ hit._source.location }}</div>
         </div>
       </div>
 
@@ -103,18 +53,18 @@
       <div v-if="selectedParagraph" ref="bookModal" class="book-modal">
         <div class="paragraphs-container">
           <!-- Book Section Metadata -->
-          <div class="mui--text-headline">{{ selectedParagraph._source.Title }} - {{ selectedParagraph._source.Author }}</div>
-          <div class="mui--text-subhead">Locations {{ startParagraph }} to {{ endParagraph }}</div>
+          <div class="mui--text-headline">{{ selectedParagraph._source.title }} - {{ selectedParagraph._source.author }}</div>
+          <div class="mui--text-subhead">Locations {{ bookOffset - 5 }} to {{ bookOffset + 5 }}</div>
           <div class="mui-divider"></div>
           <br>
 
           <!-- Book Paragraphs -->
           <div v-for="paragraph in paragraphs">
-            <div v-if="paragraph._source.Paragraph === selectedParagraph._source.Paragraph" class="mui--text-body2">
-              <strong>{{ paragraph._source.Text }}</strong>
+            <div v-if="paragraph._source.location === selectedParagraph._source.location" class="mui--text-body2">
+              <strong>{{ paragraph._source.text }}</strong>
             </div>
             <div v-else class="mui--text-body1">
-              {{ paragraph._source.Text }}
+              {{ paragraph._source.text }}
             </div>
             <br>
           </div>
@@ -131,91 +81,6 @@
   <script src="https://cdn.muicss.com/mui-0.9.28/js/mui.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.3/vue.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.17.0/axios.min.js"></script>
+  <script src="/app.js"></script>
 </body>
-<script>
-const vm = new Vue ({
-  el: '#vue-instance',
-  data () {
-    return {
-      data: null,
-      numHits: null,
-      searchResults: [],
-      paragraphs: [],
-      selectedParagraph: null,
-      searchTerm: "Hello World",
-      offset: 0,
-      searchDebounce: null,
-      baseUrl: 'http://localhost:3000',
-    }
-  },
-  created () {
-    this.search() // Search for default term
-  },
-  methods: {
-    /** Debounce search input by 100 ms */
-    onSearchInput () {
-      clearTimeout(this.searchDebounce)
-      this.searchDebounce = setTimeout(() => {
-        this.offset = 0
-        this.search()
-      }, 100)
-    },
-    /** Call API to search for inputted term */
-    async search () {
-      const response = await axios.get(`${this.baseUrl}/search`, { params: { term: this.searchTerm, offset: this.offset } })
-      const data = response.data
-      this.numHits = data.hits.total
-      this.searchResults = data.hits.hits
-    },
-    /** Call the API to get current page of paragraphs */
-    async getParagraphs (bookTitle, start, end) {
-      try {
-        this.startParagraph = start
-        this.endParagraph = end
-        const response = await axios.get(`${this.baseUrl}/paragraphs`, { params: { bookTitle, start, end } })
-        return response.data.hits.hits
-      } catch (err) {
-        console.error(err)
-      }
-    },
-    /** Get next page of search results */
-    async nextResultsPage () {
-      if (this.numHits > 10) {
-        this.offset += 10
-        if (this.offset + 10 > this.numHits) { this.offset = this.numHits - 10}
-        this.search()
-      }
-    },
-    /** Get previous page of search results */
-    async prevResultsPage () {
-      this.offset -=  10
-      if (this.offset < 0) { this.offset = 0 }
-      this.search()
-    },
-    /** Get next page (next 10 paragraphs) of selected book */
-    async nextBookPage () {
-      this.paragraphs = await this.getParagraphs(this.selectedParagraph._source.Title, this.startParagraph + 10, this.endParagraph + 10)
-    },
-    /** Get previous page (previous 10 paragraphs) of selected book */
-    async prevBookPage () {
-      this.paragraphs = await this.getParagraphs(this.selectedParagraph._source.Title, this.startParagraph - 10, this.endParagraph - 10)
-    },
-    /** Display paragraphs from selected book in modal window */
-    async showBookModal (searchHit) {
-      try {
-        document.body.style.overflow = 'hidden';
-        this.selectedParagraph = searchHit
-        this.paragraphs = await this.getParagraphs(searchHit._source.Title, searchHit._source.Paragraph - 5, searchHit._source.Paragraph + 5)
-      } catch (err) {
-        console.error(err)
-      }
-    },
-    /** Close the book detail modal */
-    closeBookModal () {
-      document.body.style.overflow = 'auto';
-      this.selectedParagraph = null
-    }
-  }
-})
-</script>
 </html>

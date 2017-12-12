@@ -1,0 +1,61 @@
+body { font-family: 'Cardo', serif; }
+
+.mui-textfield > input, .mui-btn, .mui-panel > .mui--text-headline {
+  font-family: 'Open Sans', sans-serif;
+}
+
+.app-container { padding: 16px; }
+.search-results em { font-weight: bold }
+.book-modal > button { width: 100%; }
+.search-results .mui-divider { margin: 14px 0; }
+
+.search-results {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-around;
+}
+
+.search-results > div {
+  flex-basis: 45%;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .search-results > div { flex-basis: 100%; }
+}
+
+.paragraphs-container {
+  max-width: 800px;
+  margin: 0 auto;
+  margin-bottom: 48px;
+}
+
+.book-modal {
+  width: 100%;
+  height: 100%;
+  padding: 40px 10%;
+  box-sizing: border-box;
+  margin: 0 auto;
+  background-color: white;
+  overflow-y: scroll;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.pagination-panel {
+  display: flex;
+  justify-content: space-between;
+}
+
+.modal-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  background: white;
+}
