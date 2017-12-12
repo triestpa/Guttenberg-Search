@@ -2,7 +2,7 @@ const Koa = require('koa')
 const Router = require('koa-router')
 const joi = require('joi')
 const validate = require('koa-joi-validate')
-const sherlockSearch = require('./search')
+const search = require('./search')
 const app = new Koa()
 const router = new Router()
 
@@ -41,7 +41,7 @@ router.get('/search',
   }),
   async (ctx, next) => {
     const { term, offset } = ctx.request.query
-    ctx.body = await sherlockSearch.search(term, offset)
+    ctx.body = await search.queryTerm(term, offset)
   }
 )
 
@@ -63,7 +63,7 @@ router.get('/paragraphs',
   }),
   async (ctx, next) => {
     const { bookTitle, start, end } = ctx.request.query
-    ctx.body = await sherlockSearch.getParagraphs(bookTitle, start, end)
+    ctx.body = await search.getParagraphs(bookTitle, start, end)
   }
 )
 

@@ -1,21 +1,6 @@
-const esConnection = require('./connection')
 const fs = require('fs')
 const path = require('path')
-
-/** Parse and index all txt files in data directory */
-async function readBooks () {
-  // Read books directory
-  let files = fs.readdirSync('./books').filter(file => file.slice(-4) === '.txt')
-  console.log(`Found ${files.length} Files`)
-
-  // Read each book file, and index each paragraph in elasticsearch
-  for (let file of files) {
-    console.log(`Reading File - ${file}`)
-    const filePath = path.join('./books', file)
-    const { title, author, paragraphs } = parseBookFile(filePath)
-    await insertBookData(title, author, paragraphs)
-  }
-}
+const esConnection = require('./connection')
 
 /** Read an individual book txt file, and extract the title, author, and paragraphs */
 function parseBookFile (filePath) {
@@ -42,7 +27,7 @@ function parseBookFile (filePath) {
     .map(line => line.replace(/_/g, '')) // Guttenberg uses "_" to signify italics.  We'll remove it, since it makes the raw text look messy.
     .filter((line) => (line && line.length !== '')) // Remove empty lines
 
-  console.log(`Parsed ${paragraphs.length} Lines\n`)
+  console.log(`Parsed ${paragraphs.length} Paragraphs\n`)
   return { title, author, paragraphs }
 }
 
@@ -57,10 +42,10 @@ async function insertBookData (title, author, paragraphs) {
 
     // Add document
     bulkOps.push({
-      Author: author,
-      Title: title,
-      Paragraph: i,
-      Text: paragraphs[i]
+      author,
+      title,
+      location: i,
+      text: paragraphs[i]
     })
   }
 
@@ -68,14 +53,26 @@ async function insertBookData (title, author, paragraphs) {
   await esConnection.client.bulk({ body: bulkOps })
 }
 
-/** Clear ES index and insert books from filesystem */
-async function main () {
+/** Clear ES index, parse and index all files from the books directory */
+async function readAndInsertBooks () {
   try {
+    // Clear previous ES index
     await esConnection.resetIndex()
-    await readBooks()
+
+    // Read books directory
+    let files = fs.readdirSync('./books').filter(file => file.slice(-4) === '.txt')
+    console.log(`Found ${files.length} Files`)
+
+    // Read each book file, and index each paragraph in elasticsearch
+    for (let file of files) {
+      console.log(`Reading File - ${file}`)
+      const filePath = path.join('./books', file)
+      const { title, author, paragraphs } = parseBookFile(filePath)
+      await insertBookData(title, author, paragraphs)
+    }
   } catch (err) {
     console.error(err)
   }
 }
 
-main()
+readAndInsertBooks()
