@@ -1,11 +1,10 @@
 {
   "name": "elastic-sherlock",
   "version": "0.0.1",
-  "description": "Source code for ElasticSearch tutorial using Sherlock Holmes text dataset.",
-  "main": "index.js",
+  "description": "Source code for ElasticSearch tutorial using 100 classic open source books.",
   "scripts": {
+    "dev": "npm run serve & npm start",
     "serve": "http-server ./public",
-    "test": "npm test",
     "start": "node server.js"
   },
   "repository": {
