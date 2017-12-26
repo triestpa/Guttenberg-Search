@@ -1,0 +1,38 @@
+version: '3'
+
+services:
+
+  # Node.js App
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+     - NODE_ENV=local
+     - ES_HOST=elasticsearch
+     - PORT=3000
+    volumes:
+      - ./books:/usr/src/app/books
+
+  # Nginx Server For Frontend App
+  frontend:
+    image: nginx
+    volumes:
+      - ./public:/usr/share/nginx/html
+    ports:
+      - "80:80"
+
+  # Elasticsearch Instance
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.1.1
+    volumes:
+      - ./esdata:/usr/share/elasticsearch/data
+    environment:
+      - discovery.type=single-node
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9300:9300"
+      - "9200:9200"
