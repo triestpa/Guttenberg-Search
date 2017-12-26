@@ -7,80 +7,85 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.min.css" rel="stylesheet" type="text/css" />
   <link href="https://cdn.muicss.com/mui-0.9.20/css/mui.min.css" rel="stylesheet" type="text/css" />
-  <link href="https://fonts.googleapis.com/css?family=Cardo|Open+Sans" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css?family=EB+Garamond:400,700|Open+Sans" rel="stylesheet">
   <link href="/styles.css" rel="stylesheet" />
 </head>
 <body>
-  <div class="app-container" id="vue-instance">
+<div class="app-container" id="vue-instance">
 
-      <!-- Search Bar Header -->
-      <div class="mui-panel">
-        <div class="mui-textfield">
-          <input v-model="searchTerm" type="text" v-on:keyup="onSearchInput()">
-          <label>Search</label>
+    <!-- Search Bar Header -->
+    <div class="mui-panel">
+      <div class="mui-textfield">
+        <input v-model="searchTerm" type="text" v-on:keyup="onSearchInput()">
+        <label>Search</label>
+      </div>
+    </div>
+
+    <!-- Search Metadata Card -->
+    <div class="mui-panel">
+      <div class="mui--text-headline">{{ numHits }} Hits</div>
+      <div class="mui--text-subhead">Displaying Results {{ searchOffset }} - {{ searchOffset + 9 }}</div>
+    </div>
+
+    <!-- Top Pagination Card -->
+    <div class="mui-panel pagination-panel">
+        <button class="mui-btn mui-btn--flat" v-on:click="prevResultsPage()">Prev Page</button>
+        <button class="mui-btn mui-btn--flat" v-on:click="nextResultsPage()">Next Page</button>
+    </div>
+
+    <!-- Search Results Card List -->
+    <div class="search-results" ref="searchResults">
+      <div class="mui-panel" v-for="hit in searchResults" v-on:click="showBookModal(hit)">
+        <div class="mui--text-title" v-html="hit.highlight.text[0]"></div>
+        <div class="mui-divider"></div>
+        <div class="mui--text-subhead">{{ hit._source.title }} - {{ hit._source.author }}</div>
+        <div class="mui--text-body2">Location {{ hit._source.location }}</div>
+      </div>
+    </div>
+
+    <!-- Bottom Pagination Card -->
+    <div class="mui-panel pagination-panel">
+        <button class="mui-btn mui-btn--flat" v-on:click="prevResultsPage()">Prev Page</button>
+        <button class="mui-btn mui-btn--flat" v-on:click="nextResultsPage()">Next Page</button>
+    </div>
+
+    <!-- Book Paragraphs Modal Window -->
+    <div v-if="selectedParagraph" ref="bookModal" class="book-modal">
+      <div class="paragraphs-container">
+        <!-- Book Section Metadata -->
+        <div class="title-row">
+          <div class="mui--text-display2 all-caps">{{ selectedParagraph._source.title }}</div>
+          <div class="mui--text-display1">{{ selectedParagraph._source.author }}</div>
         </div>
-      </div>
+        <br>
+        <div class="mui-divider"></div>
+        <div class="mui--text-subhead locations-label">Locations {{ bookOffset - 5 }} to {{ bookOffset + 5 }}</div>
+        <div class="mui-divider"></div>
+        <br>
 
-      <!-- Search Metadata Card -->
-      <div class="mui-panel">
-        <div class="mui--text-headline">{{ numHits }} Hits</div>
-        <div class="mui--text-subhead">Displaying Results {{ searchOffset }} - {{ searchOffset + 9 }}</div>
-      </div>
-
-      <!-- Top Pagination Card -->
-      <div class="mui-panel pagination-panel">
-          <button class="mui-btn mui-btn--flat" v-on:click="prevResultsPage()">Prev Page</button>
-          <button class="mui-btn mui-btn--flat" v-on:click="nextResultsPage()">Next Page</button>
-      </div>
-
-      <!-- Search Results Card List -->
-      <div class="search-results" ref="searchResults">
-        <div class="mui-panel" v-for="hit in searchResults" v-on:click="showBookModal(hit)">
-          <div class="mui--text-title" v-html="hit.highlight.text[0]"></div>
-          <div class="mui-divider"></div>
-          <div class="mui--text-subhead">{{ hit._source.title }} - {{ hit._source.author }}</div>
-          <div class="mui--text-caption">Location {{ hit._source.location }}</div>
-        </div>
-      </div>
-
-      <!-- Bottom Pagination Card -->
-      <div class="mui-panel pagination-panel">
-          <button class="mui-btn mui-btn--flat" v-on:click="prevResultsPage()">Prev Page</button>
-          <button class="mui-btn mui-btn--flat" v-on:click="nextResultsPage()">Next Page</button>
-      </div>
-
-      <!-- Book Paragraphs Modal Window -->
-      <div v-if="selectedParagraph" ref="bookModal" class="book-modal">
-        <div class="paragraphs-container">
-          <!-- Book Section Metadata -->
-          <div class="mui--text-headline">{{ selectedParagraph._source.title }} - {{ selectedParagraph._source.author }}</div>
-          <div class="mui--text-subhead">Locations {{ bookOffset - 5 }} to {{ bookOffset + 5 }}</div>
-          <div class="mui-divider"></div>
-          <br>
-
-          <!-- Book Paragraphs -->
-          <div v-for="paragraph in paragraphs">
-            <div v-if="paragraph._source.location === selectedParagraph._source.location" class="mui--text-body2">
-              <strong>{{ paragraph._source.text }}</strong>
-            </div>
-            <div v-else class="mui--text-body1">
-              {{ paragraph._source.text }}
-            </div>
-            <br>
+        <!-- Book Paragraphs -->
+        <div v-for="paragraph in paragraphs">
+          <div v-if="paragraph._source.location === selectedParagraph._source.location" class="mui--text-body2">
+            <strong>{{ paragraph._source.text }}</strong>
           </div>
-        </div>
-
-        <!-- Book Pagination Footer -->
-        <div class="modal-footer">
-          <button class="mui-btn mui-btn--flat" v-on:click="prevBookPage()">Prev Page</button>
-          <button class="mui-btn mui-btn--flat" v-on:click="closeBookModal()">Close</button>
-          <button class="mui-btn mui-btn--flat" v-on:click="nextBookPage()">Next Page</button>
+          <div v-else class="mui--text-body1">
+            {{ paragraph._source.text }}
+          </div>
+          <br>
         </div>
       </div>
-  </div>
-  <script src="https://cdn.muicss.com/mui-0.9.28/js/mui.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.3/vue.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.17.0/axios.min.js"></script>
-  <script src="/app.js"></script>
+
+      <!-- Book Pagination Footer -->
+      <div class="modal-footer">
+        <button class="mui-btn mui-btn--flat" v-on:click="prevBookPage()">Prev Page</button>
+        <button class="mui-btn mui-btn--flat" v-on:click="closeBookModal()">Close</button>
+        <button class="mui-btn mui-btn--flat" v-on:click="nextBookPage()">Next Page</button>
+      </div>
+    </div>
+</div>
+<script src="https://cdn.muicss.com/mui-0.9.28/js/mui.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.3/vue.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.17.0/axios.min.js"></script>
+<script src="/app.js"></script>
 </body>
 </html>

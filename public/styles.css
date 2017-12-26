@@ -1,11 +1,12 @@
-body { font-family: 'Cardo', serif; }
+body { font-family: 'EB Garamond', serif; }
 
-.mui-textfield > input, .mui-btn, .mui-panel > .mui--text-headline {
+.mui-textfield > input, .mui-btn, .mui--text-subhead, .mui-panel > .mui--text-headline {
   font-family: 'Open Sans', sans-serif;
 }
 
+.all-caps { text-transform: uppercase; }
 .app-container { padding: 16px; }
-.search-results em { font-weight: bold }
+.search-results em { font-weight: bold; }
 .book-modal > button { width: 100%; }
 .search-results .mui-divider { margin: 14px 0; }
 
@@ -32,6 +33,11 @@ body { font-family: 'Cardo', serif; }
   margin-bottom: 48px;
 }
 
+.paragraphs-container .mui--text-body1, .paragraphs-container .mui--text-body2 {
+  font-size: 1.8rem;
+  line-height: 35px;
+}
+
 .book-modal {
   width: 100%;
   height: 100%;
@@ -48,6 +54,17 @@ body { font-family: 'Cardo', serif; }
 .pagination-panel {
   display: flex;
   justify-content: space-between;
+}
+
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.locations-label {
+  text-align: center;
+  margin: 8px;
 }
 
 .modal-footer {
