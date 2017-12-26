@@ -3,13 +3,23 @@ const elasticsearch = require('elasticsearch')
 // Core ES variables for this project
 const index = 'library'
 const type = 'novel'
-const host = 'localhost:9200'
+const port = 9200
+const host = process.env.ES_HOST || 'localhost'
+const client = new elasticsearch.Client({ host: { host, port } })
 
-// Connect to ElasticSearch
-const client = new elasticsearch.Client({ host })
-
-// Print ES cluster health to console
-client.cluster.health({}).then(console.log).catch(console.error)
+async function checkConnection () {
+  let isConnected = false
+  while (!isConnected) {
+    console.log('Connecting to ES')
+    try {
+      const health = await client.cluster.health({})
+      console.log(health)
+      isConnected = true
+    } catch (err) {
+      console.log('Connection Failed, Retrying...', err)
+    }
+  }
+}
 
 /** Clear the index, recreate it, and add mappings */
 async function resetIndex () {
@@ -34,5 +44,5 @@ async function putBookMapping () {
 }
 
 module.exports = {
-  client, index, type, resetIndex
+  client, index, type, checkConnection, resetIndex
 }

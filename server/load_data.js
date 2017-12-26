@@ -55,6 +55,8 @@ async function insertBookData (title, author, paragraphs) {
 
 /** Clear ES index, parse and index all files from the books directory */
 async function readAndInsertBooks () {
+  await esConnection.checkConnection()
+
   try {
     // Clear previous ES index
     await esConnection.resetIndex()
