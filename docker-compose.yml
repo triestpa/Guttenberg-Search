@@ -7,17 +7,17 @@ services:
     build: .
     ports:
       - "3000:3000"
-    environment:
+    environment: # Set ENV vars
      - NODE_ENV=local
      - ES_HOST=elasticsearch
      - PORT=3000
-    volumes:
+    volumes: # Attach local book data directory
       - ./books:/usr/src/app/books
 
   # Nginx Server For Frontend App
   frontend:
     image: nginx
-    volumes:
+    volumes: # Serve local "public" dir
       - ./public:/usr/share/nginx/html
     ports:
       - "80:80"
@@ -25,14 +25,10 @@ services:
   # Elasticsearch Instance
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:6.1.1
-    volumes:
+    volumes: # Persist ES data in local "esdata" directory
       - ./esdata:/usr/share/elasticsearch/data
     environment:
       - discovery.type=single-node
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
     ports:
       - "9300:9300"
       - "9200:9200"
