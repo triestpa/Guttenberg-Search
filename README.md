@@ -1,4 +1,4 @@
-# Building a Book Search App Using ElasticSeach
+# Building a Full-Text Search App Using ElasticSearch And Docker
 
 Adding fast, flexible, and accurate full-text search to apps can be a major challenge.  Most mainstream databases, such as PostgreSQL and MongoDB, and offer rudimentary text search capabilities - which largely exist as afterthoughts to the existing query and index structure.  In order to provide top-notch full-text search, a seperate datastore is often the best option.  ElasticSearch is a leading open-source datastore that is optimized to perform incredibly flexible and fast in-memory full-text search.
 
@@ -10,7 +10,7 @@ In this tutorial, we will walk through building a web app to search through the 
 
 ### ElasticSearch
 
-We'll be indexing and querying data from ElasticSearch throughout this tutorial.  ElasticSearch is compatable with all major operating systems, see here for installation instructions for each. [ insert install links here ]
+We'll be indexing and querying data from ElasticSearch throughout this tutorial.  ElasticSearch is compatible with all major operating systems, see here for installation instructions for each. [ insert install links here ]
 
 ### NodeJS
 
