@@ -1,5 +1,5 @@
 {
-  "name": "elastic-sherlock",
+  "name": "guttenberg-search",
   "version": "0.0.1",
   "description": "Source code for ElasticSearch tutorial using 100 classic open source books.",
   "scripts": {
@@ -9,20 +9,28 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/triestpa/elastic-sherlock.git"
+    "url": "git+https://github.com/triestpa/guttenberg-search.git"
   },
   "author": "patrick.triest@gmail.com",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/triestpa/elastic-sherlock/issues"
+    "url": "https://github.com/triestpa/guttenberg-search/issues"
   },
-  "homepage": "https://github.com/triestpa/elastic-sherlock#readme",
+  "homepage": "https://github.com/triestpa/guttenberg-search#readme",
   "dependencies": {
     "elasticsearch": "13.3.1",
-    "http-server": "0.10.0",
     "joi": "13.0.1",
     "koa": "2.4.1",
     "koa-joi-validate": "0.5.1",
     "koa-router": "7.2.1"
+  },
+  "devDependencies": {
+    "eslint": "^4.14.0",
+    "eslint-config-standard": "^11.0.0-beta.0",
+    "eslint-plugin-import": "^2.8.0",
+    "eslint-plugin-node": "^5.2.1",
+    "eslint-plugin-promise": "^3.6.0",
+    "eslint-plugin-standard": "^3.0.1",
+    "http-server": "0.10.0"
   }
 }
