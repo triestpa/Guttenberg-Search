@@ -5,7 +5,7 @@ services:
   # Node.js App
   api:
     build: .
-    container_name: elastic-library-api
+    container_name: gs-api
     ports:
       - "3000:3000"
     environment: # Set ENV vars
@@ -18,15 +18,15 @@ services:
   # Nginx Server For Frontend App
   frontend:
     image: nginx
-    container_name: elastic-library-frontend
+    container_name: gs-frontend
     volumes: # Serve local "public" dir
       - ./public:/usr/share/nginx/html
     ports:
-      - "80:80"
+      - "8080:80"
 
   # Elasticsearch Instance
   elasticsearch:
-    container_name: elastic-library-search
+    container_name: gs-search
     image: docker.elastic.co/elasticsearch/elasticsearch:6.1.1
     volumes: # Persist ES data in local "esdata" directory
       - ./esdata:/usr/share/elasticsearch/data

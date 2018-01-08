@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-docker exec elastic-library-api "node" "server/load_data.js"
+docker exec gs-api "node" "server/load_data.js"
