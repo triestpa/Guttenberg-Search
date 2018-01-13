@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "npm run serve & npm start",
     "serve": "http-server ./public",
-    "start": "node server/app.js"
+    "start": "node --inspect=0.0.0.0:9229 server/app.js"
   },
   "repository": {
     "type": "git",
@@ -25,12 +25,6 @@
     "koa-router": "7.2.1"
   },
   "devDependencies": {
-    "eslint": "^4.14.0",
-    "eslint-config-standard": "^11.0.0-beta.0",
-    "eslint-plugin-import": "^2.8.0",
-    "eslint-plugin-node": "^5.2.1",
-    "eslint-plugin-promise": "^3.6.0",
-    "eslint-plugin-standard": "^3.0.1",
     "http-server": "0.10.0"
   }
 }
