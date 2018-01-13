@@ -33,7 +33,7 @@ app.use(async (ctx, next) => {
  * offset: positive integer
  */
 router.get('/search',
-  validate({ //
+  validate({
     query: {
       term: joi.string().max(60).required(),
       offset: joi.number().integer().min(0).default(0)
@@ -72,6 +72,7 @@ const port = process.env.PORT || 3000
 app
   .use(router.routes())
   .use(router.allowedMethods())
-  .listen(port)
-
-console.log(`App Listening on Port ${port}`)
+  .listen(port, err => {
+    if (err) console.error(err)
+    console.log(`App Listening on Port ${port}`)
+  })
