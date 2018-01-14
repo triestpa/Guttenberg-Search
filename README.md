@@ -1,4 +1,5 @@
-# Building a Full-Text Search App Using ElasticSearch And Docker
+
+# Building a Full-Text Search App Using ElasticSearch, Node.js, and Vue.js
 
 Adding fast, flexible, and accurate full-text search to apps can be a major challenge.  Most mainstream databases, such as PostgreSQL and MongoDB, and offer rudimentary text search capabilities - which largely exist as afterthoughts to the existing query and index structure.  In order to provide top-notch full-text search, a seperate datastore is often the best option.  ElasticSearch is a leading open-source datastore that is optimized to perform incredibly flexible and fast in-memory full-text search.
 
@@ -6,35 +7,179 @@ Adding fast, flexible, and accurate full-text search to apps can be a major chal
 
 In this tutorial, we will walk through building a web app to search through the texts of 100 open source literary classics.
 
+## What is Elasticsearch?
+
+Full-text search is one of the most requested features in modern applications, with use-cases from finding archived posts to searching for a users by name.  Search can also be one of the most difficult features to do well - many popular websites have subpar search functionality that returns results slowly and has trouble working around typos.  Often, this is due to limitations in the underlying database: most standard SQL databases are limited to basic “CONTAINS” or “LIKE” string queries, which provide only the most basic functionality, sometimes with dubious performance, for searching a specific term.
+
+In order to build a super-powered search feature, it’s often most ideal to use a datastore which is optimized for the task of full-text search.  This is where Elasticsearch comes into play; Elasticsearch is an open-source schemaless datastore, originally built on the Apache Lucene library.  Elasticsearch is able to provide unreasonably fast and flexible full-text search through the use of inverted indexes.  
+
+## What is an inverted index?
+
+A database index is a data structure to allow for ultra-fast data query and retrieval operations.  Normal databases generally index entries by storing an association of fields with the matching table rows.  By storing the index in a searchable data structure (often a B-Tree), databases can achieve sub-linear time on optimized queries (such as “Find the row with ID = 5”).
+
+{{ add image }}
+
+Inverted indexes work in a substantially different manner.  The content of each row (or document) is split up, and each individual entry (in this case each word) points back to each document that it was originally found within.
+
+{{ add image }}
+  
+This inverted-index data structure allows us to very quickly find, say, all of the documents where “football” was mentioned.  By using an inverted index such as this one as a base, Elasticsearch enables us to perform some very powerful and customizable full-text searches on our stored data.
+
+To demonstrate the power of Elasticsearch, we’ll be building a an app to search through the full text contents of 100 public-domain literary classics.
+
+
 ## Project Setup
 
-### ElasticSearch
+### Docker
 
-We'll be indexing and querying data from ElasticSearch throughout this tutorial.  ElasticSearch is compatible with all major operating systems, see here for installation instructions for each. [ insert install links here ]
+We'll be using Docker to manage the environments and dependencies for this project.  Docker is a poular container engine, EXPLAIN DOCKER HERE .
 
-### NodeJS
+### Install Docker & Docker-Compose
 
-We'll be interfacing with our ES instance using Node.js.  Our server code uses the async/await syntax, so Node.js 7.8 or higher is required for this project.
+### Setup Project Directories
 
-See here for installation instructions [insert install links here]
+First create a base directory  (say `guttenberg_search`) for the project. To organize our project we'll work within two main directories.
 
-Create a new directory for you project, and add a new `package.json` file.
+- `/public` - Store files for the frontend Vue.js webapp.
+- `/server` - Server-side Node.js sourcecode
+
+### Add Docker-Compose.yml
+
+Next, we'll create a `docker-compose.yml` file to define each container in our application stack.
+
+1. `gs-api` - The Node.js container for the backend application logic.
+2. `gs-frontend` - An Ngnix container for serving the frontend webapp files.
+3. `gs-search` - An ElasticSearch container for storing and searching data.
+
+```yaml
+version: '3'
+
+services:
+  api: # Node.js App
+    build: .
+    container_name: gs-api
+    ports:
+      - "3000:3000" # Expose API port
+      - "9229:9229" # Expose Node process debug port (disable in production)
+    environment: # Set ENV vars
+     - NODE_ENV=local
+     - ES_HOST=elasticsearch
+     - PORT=3000
+    volumes: # Attach local book data directory
+      - ./books:/usr/src/app/books
+
+  frontend: # Nginx Server For Frontend App
+    image: nginx
+    container_name: gs-frontend
+    volumes: # Serve local "public" dir
+      - ./public:/usr/share/nginx/html
+    ports:
+      - "8080:80" # Forward site to localhost:8080
+
+  elasticsearch: # Elasticsearch Instance
+    container_name: gs-search
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.1.1
+    volumes: # Persist ES data in local "esdata" directory
+      - ./esdata:/usr/share/elasticsearch/data
+    environment:
+      - discovery.type=single-node
+    ports: # Expose ElasticSearch ports
+      - "9300:9300"
+      - "9200:9200"
+```
+
+This file defines our entire stack - no need to install ElasticSearch or Nginx on your local system.  This allows the app to be very portable - in order to run it on a new machine there's no need to check dependencies or worry about operating syste compabaility and inconsistent environments.  Each container is exposing ports that can be accessed on the host system, in order for us to access the API and fronted app.  Containers can also communicate among themselves on a innernal network, which is how we'll get the Node app to communicate with ElasticSearch.
+
+### Add Dockerfile
+
+We're using offical prebuilt images for Nginx and ElasticSearch, but we'll need to build our own image for the Node.js app.
+
+All that we need to do for this is define a simple `Dockerfile`.
+
+```docker
+# Use Node v8.9.0 LTS
+FROM node:carbon
+
+# Setup app working directory
+WORKDIR /usr/src/app
+
+# Copy package.json and package-lock.json
+COPY package*.json ./
+
+# Install app dependencies
+RUN npm install
+
+# Copy sourcecode
+COPY . .
+
+# Start app
+CMD [ "npm", "start" ]
+```
+
+This Docker configuraton extends the official Node.js image, and installs our application sourcecode and dependencies within the container.
+
+For maximal efficiency, we'll also add a `.dockerignore` file to avoid copying unessesary files into the container.
+
+```text
+node_modules
+npm-debug.log
+books/
+public/
+```
+
+### Add App Base Files
+
+In order to test out the configuration, we'll need to add two placeholder files to the app directories.
+
+Add this base HTML file at `public/index.html`
+
+```html
+<html><body>Hello World From The Frontend Container</body></html>
+```
+
+Next, add the placeholder Node.js app file at `server/app.js`.
+
+```javascript
+const Koa = require('koa')
+const app = new Koa()
+
+app.use(async (ctx, next) => {
+	ctx.body = 'Hello World From the Backend Container'
+})
+
+const port = process.env.PORT || 3000
+
+app
+  .use(router.routes())
+  .use(router.allowedMethods())
+  .listen(port, err => {
+    if (err) console.error(err)
+    console.log(`App Listening on Port ${port}`)
+  })
+```
+
+Finally, add our `package.json` Node app configuration.
 
 ```json
 {
-  "name": "elastic-library",
-  "version": "1.0.0",
+  "name": "guttenberg-search",
+  "version": "0.0.1",
   "description": "Source code for ElasticSearch tutorial using 100 classic open source books.",
   "scripts": {
-    "dev": "npm run serve & npm start",
-    "serve": "http-server ./public",
-    "start": "node server.js"
+    "start": "node --inspect=0.0.0.0:9229 server/app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/triestpa/guttenberg-search.git"
   },
   "author": "patrick.triest@gmail.com",
   "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/triestpa/guttenberg-search/issues"
+  },
+  "homepage": "https://github.com/triestpa/guttenberg-search#readme",
   "dependencies": {
     "elasticsearch": "13.3.1",
-    "http-server": "0.10.0",
     "joi": "13.0.1",
     "koa": "2.4.1",
     "koa-joi-validate": "0.5.1",
@@ -42,29 +187,75 @@ Create a new directory for you project, and add a new `package.json` file.
   }
 }
 ```
-<br>
 
-Run `npm install` on the command line to download the server dependencies.
+This file defines our applications start command and dependencies.
+
+### Try it Out
+
+Everything is in place now to test our each component of the app.  From the base directory, run `docker-compose up`.  This will start up the three application containers.
+
+{{ add output screenshots }}
+
+
+Try visiting `localhost:8080` in you browser - you should see a simple "Hello World" webpage.
+
+Visit `localhost:3000` to verify that our Node server returns it's own "Hello World" message.
+
+Finally, visit `localhost:9200` to check that ElasticSearch is running.  It should return informtion similar to this.
+
+```json
+{
+  "name" : "SLTcfpI",
+  "cluster_name" : "docker-cluster",
+  "cluster_uuid" : "iId8e0ZeS_mgh9ALlWQ7-w",
+  "version" : {
+    "number" : "6.1.1",
+    "build_hash" : "bd92e7f",
+    "build_date" : "2017-12-17T20:23:25.338Z",
+    "build_snapshot" : false,
+    "lucene_version" : "7.1.0",
+    "minimum_wire_compatibility_version" : "5.6.0",
+    "minimum_index_compatibility_version" : "5.0.0"
+  },
+  "tagline" : "You Know, for Search"
+}
+```
+
+If all three URLs display data successfully, congrats!  The entire stack is now ready for our code.
 
 ## Connect To Elastic Search
 
 The first thing that we'll need to do in our app is connect to our local Elasticsearch instance.
 
-Add the following initialization code to a new file `connection.js`.
+Create a new directory called `server` for the Node.js server code.
+
+Add the following Elasticsearch initialization code to a new file `server/connection.js`.
 
 ```javascript
 const elasticsearch = require('elasticsearch')
 
 // Core ES variables for this project
-const index = 'book'
+const index = 'library'
 const type = 'novel'
-const host = 'localhost:9200'
+const port = 9200
+const host = process.env.ES_HOST || 'localhost'
+const client = new elasticsearch.Client({ host: { host, port } })
 
-// Connect to ElasticSearch
-const client = new elasticsearch.Client({ host })
+async function checkConnection () {
+  let isConnected = false
+  while (!isConnected) {
+    console.log('Connecting to ES')
+    try {
+      const health = await client.cluster.health({})
+      console.log(health)
+      isConnected = true
+    } catch (err) {
+      console.log('Connection Failed, Retrying...', err)
+    }
+  }
+}
 
-// Print ES cluster health to console
-client.cluster.health({}).then(console.log).catch(console.error)
+checkConnection()
 ```
 <br>
 
@@ -113,7 +304,7 @@ async function resetIndex () {
 Next, we'll want to add a "mapping" for the book data schema.
 
 ```javascript
-/** Add book schema mapping to ES */
+/** Add book section schema mapping to ES */
 async function putBookMapping () {
   const schema = {
     title: { type: 'keyword' },
@@ -129,13 +320,13 @@ async function putBookMapping () {
 
 Here we are defining a mapping for the `book` index.  An Elasticsearch `index` is roughly analogous to a SQL `table` or a MongoDB `collection`.  Adding a mapping allows us to specify each field and datatype for the stored documents.  Elasticsearch is schema-less, so we don't technically have to add a mapping, but doing so will give us more control over how the data is handled.
 
-For instance - we're assigning the `keyword` type to the "title" and "author" fields, and the `text` type to "text".  Doing so will cause the search engine to treat these string fields differently - During a search, the engine will search *within* the `text` field for potential matches, whereas `keyword` fields will be matched based on their full content.  This might seem like a minor distinction, but it can have a huge impact on the behavior and speed of different searches.
+For instance - we're assigning the `keyword` type to the "title" and "author" fields, and the `text` type to the "text" field.  Doing so will cause the search engine to treat these string fields differently - During a search, the engine will search *within* the `text` field for potential matches, whereas `keyword` fields will be matched based on their full content.  This might seem like a minor distinction, but it can have a huge impact on the behavior and speed of different searches.
 
 Export the exposed properties and functions at the bottom of the file, so that they can be accessed by other modules in our app.
 
 ```javascript
 module.exports = {
-  client, index, type, resetIndex
+  client, index, type, checkConnection, resetIndex
 }
 ```
 <br>
@@ -144,6 +335,8 @@ module.exports = {
 
 We'll be using data from "Project Gutenberg" - an online project dedicated to providing free, digital copies of books within the public domain.  For this project, we'll be populating our library with 100 classic books, including texts such as "The Adventures of Sherlock Holmes", "Treasure Island", "The Count of Monte Cristo", "Around the World in 80 Days", "Romeo and Juliet", and "The Odyssey".
 
+{{ add book covers image }}
+
 ### Download Books
 
 I've zipped the 100 books into a file that you can download here - {insert download link}
@@ -151,7 +344,7 @@ Extract this file into a `/books` directory in your project.
 
 ### Preview A Book
 
-Try opening one of the book files, say `219-0.txt`.  You'll notice that it starts with an open source license, followed by lines identifying the book title, author, ebook release dates, language and character encoding.
+Try opening one of the book files, say `219-0.txt`.  You'll notice that it starts with an open source license, followed by some lines identifying the book title, author, release dates, language and character encoding.
 
 ```txt
 Title: Heart of Darkness
@@ -170,6 +363,8 @@ Character set encoding: UTF-8
 After these lines comes `*** START OF THIS PROJECT GUTENBERG EBOOK HEART OF DARKNESS ***`, after which the book content actually starts.
 
 If you scroll to the end of the book you'll see the matching message `*** END OF THIS PROJECT GUTENBERG EBOOK HEART OF DARKNESS ***`, which is followed by a much more detailed version of the book's open source license.
+
+In the next steps, we'll programatically parse the book metadata from this header, and to extract the book content from between the `*** START OF` and `***END OF` placemarkers.
 
 ## Data Loading
 
@@ -212,8 +407,8 @@ readAndInsertBooks()
 ```
 <br>
 
-Try running `node load_data.js`.  You should see Elasticsearch status output, followed by `Found 100 Books`.
-After this, the script should exit due to an error, since we're calling helper functions that we have not yet defined.
+Try running `node load_data.js`.  You should see the Elasticsearch status output, followed by `Found 100 Books`.
+After this, the script should exit due to an error, since we're calling a helper function (`parseBookFile`) that we have not yet defined.
 
 ### Read Data File
 
@@ -300,6 +495,10 @@ async function insertBookData (title, author, paragraphs) {
 
 This function will index each paragraph of the book, with author, title, and paragraph location metadata attached.  We are inserting the paragraphs using a bulk operation, which is much faster than indexing each paragraph individually.
 
+Run our `node server/load_data.js` again - you should now see a full output of 100 books being parsed and inserted in Elasticsearch.  This might take a minute or so.
+
+{{ add screenshot }}
+
 ## Querying
 
 Now that ElasticSearch has been populated with 100 books, let's try out some queries.
@@ -333,7 +532,6 @@ module.exports = {
 ```
 <br>
 
-
 Our search module defines a simple `search` function, which will perform a `match` query using the input term.
 
 Here are query fields broken down -
@@ -351,16 +549,15 @@ module.exports.queryTerm('patrick').then(results => results.hits.hits.forEach(co
 ```
 <br>
 
-
-Running `node search.js` should log each of the first 10 search results for the term.
+Running `node search.js` should now log each of the first 10 search results for the term.
 
 ## API
 
 Let's write a quick HTTP API in order to access our search functionality from a frontend app.
 
-### Koajs server
+### API Server
 
-Add a new file `server.js`.
+Add a new file `server/app.js`.
 
 ```javascript
 const Koa = require('koa')
@@ -396,12 +593,14 @@ app.use(async (ctx, next) => {
 app
   .use(router.routes())
   .use(router.allowedMethods())
-  .listen(3000)
+  .listen(port, err => {
+    if (err) throw err
+    console.log(`App Listening on Port ${port}`)
+  })
 ```
 <br>
 
-
-This code will import our server dependencies and setup simple logging and error handling for a Koajs server.
+This code will import our server dependencies and set up simple logging and error handling for a Koa.js Node API server.
 
 ### Link endpoint with queries
 
@@ -422,12 +621,11 @@ router.get('/search', async (ctx, next) => {
 ```
 <br>
 
-
-[ add code to try it out ]
+Try running the Node server with `npm start`.  You should see terminal output confirming that the app is listening at port 3000.  In your browser, try calling the search endpoint.  For example, this request would search the entire library for passages mentioning "Patrick" - `http://localhost:3000/search?term=patrick`
 
 ### Input validation
 
-This endpoint is a bit brittle - we are not doing any checks on the request parameters, so invalid or missing values would result in a server error.
+This endpoint is still brittle - we are not doing any checks on the request parameters, so invalid or missing values would result in a server error.
 
 We'll add some middleware to the endpoint in order to validate input parameters using Joi and the Koa-Joi-Validate library.
 
@@ -448,14 +646,14 @@ router.get('/search',
   }),
   async (ctx, next) => {
     const { term, offset } = ctx.request.query
-    ctx.body = await search.search(term, offset)
+    ctx.body = await search.queryTerm(term, offset)
   }
 )
 ```
-<br>
 
+Now, if you restart the server and make a request with a missing term(`http://localhost:3000/search`), you will get back an HTTP 400 error with a descriptive message.
 
-## Web App
+## Front-End Application
 
 Now that our `/search` endpoint is in place, let's wire up a simple web app to test out the API.
 
@@ -473,8 +671,7 @@ const vm = new Vue ({
   data () {
     return {
       baseUrl: 'http://localhost:3000', // API url
-
-      searchTerm: "Hello World", // Default search term
+      searchTerm: 'Hello World', // Default search term
       searchDebounce: null, // Timeout for search bar debounce
       searchResults: [], // Displayed search results
       numHits: null, // Total search results found
@@ -499,10 +696,7 @@ const vm = new Vue ({
     },
     /** Call API to search for inputted term */
     async search () {
-      const response = await axios.get(`${this.baseUrl}/search`, { params:
-        { term: this.searchTerm, offset: this.searchOffset }
-      })
-
+      const response = await axios.get(`${this.baseUrl}/search`, { params: { term: this.searchTerm, offset: this.searchOffset } })
       this.numHits = response.data.hits.total
       return response.data.hits.hits
     },
@@ -517,20 +711,18 @@ const vm = new Vue ({
     },
     /** Get previous page of search results */
     async prevResultsPage () {
-      this.searchOffset -=  10
+      this.searchOffset -= 10
       if (this.searchOffset < 0) { this.searchOffset = 0 }
       this.searchResults = await this.search()
       document.documentElement.scrollTop = 0
     }
-  }
 })
 ```
 <br>
 
-
 The app is pretty simple - we're just defining some shared data properties, and adding methods to retrieve and paginate through search results.  The search input is debounced by 100ms, to prevent the API from being called with every keystroke.
 
-Explaining how Vue.js works is slightly outside the scope of this tutorial, but if you've used Angular or React this probably won't look too crazy.  Here's a good tutorial on Vue if you want something quick to get started with [ ADD VUE TUTORIAL ]
+Explaining how Vue.js works is outside the scope of this tutorial, but this probably won't look too crazy if you've used Angular or React.  Here's a good tutorial on Vue if you want something quick to get started with [ ADD VUE TUTORIAL ]
 
 ### HTML
 
@@ -546,55 +738,53 @@ Add the following to a new file, `/public/index.html`.
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.min.css" rel="stylesheet" type="text/css" />
   <link href="https://cdn.muicss.com/mui-0.9.20/css/mui.min.css" rel="stylesheet" type="text/css" />
-  <link href="https://fonts.googleapis.com/css?family=Cardo|Open+Sans" rel="stylesheet" />
-  <link href="styles.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css?family=EB+Garamond:400,700|Open+Sans" rel="stylesheet">
+  <link href="/styles.css" rel="stylesheet" />
 </head>
 <body>
-  <div class="app-container" id="vue-instance">
-
-      <!-- Search Bar Header -->
-      <div class="mui-panel">
-        <div class="mui-textfield">
-          <input v-model="searchTerm" type="text" v-on:keyup="onSearchInput()">
-          <label>Search</label>
-        </div>
+<div class="app-container" id="vue-instance">
+    <!-- Search Bar Header -->
+    <div class="mui-panel">
+      <div class="mui-textfield">
+        <input v-model="searchTerm" type="text" v-on:keyup="onSearchInput()">
+        <label>Search</label>
       </div>
+    </div>
 
-      <!-- Search Metadata Card -->
-      <div class="mui-panel">
-        <div class="mui--text-headline">{{ numHits }} Hits</div>
-        <div class="mui--text-subhead">Displaying Results {{ searchOffset }} - {{ searchOffset + 9 }}</div>
+    <!-- Search Metadata Card -->
+    <div class="mui-panel">
+      <div class="mui--text-headline">{{ numHits }} Hits</div>
+      <div class="mui--text-subhead">Displaying Results {{ searchOffset }} - {{ searchOffset + 9 }}</div>
+    </div>
+
+    <!-- Top Pagination Card -->
+    <div class="mui-panel pagination-panel">
+        <button class="mui-btn mui-btn--flat" v-on:click="prevResultsPage()">Prev Page</button>
+        <button class="mui-btn mui-btn--flat" v-on:click="nextResultsPage()">Next Page</button>
+    </div>
+
+    <!-- Search Results Card List -->
+    <div class="search-results" ref="searchResults">
+      <div class="mui-panel" v-for="hit in searchResults" v-on:click="showBookModal(hit)">
+        <div class="mui--text-title" v-html="hit.highlight.text[0]"></div>
+        <div class="mui-divider"></div>
+        <div class="mui--text-subhead">{{ hit._source.title }} - {{ hit._source.author }}</div>
+        <div class="mui--text-body2">Location {{ hit._source.location }}</div>
       </div>
+    </div>
 
-      <!-- Top Pagination Card -->
-      <div class="mui-panel pagination-panel">
-          <button class="mui-btn mui-btn--flat" v-on:click="prevResultsPage()">Prev Page</button>
-          <button class="mui-btn mui-btn--flat" v-on:click="nextResultsPage()">Next Page</button>
-      </div>
+    <!-- Bottom Pagination Card -->
+    <div class="mui-panel pagination-panel">
+        <button class="mui-btn mui-btn--flat" v-on:click="prevResultsPage()">Prev Page</button>
+        <button class="mui-btn mui-btn--flat" v-on:click="nextResultsPage()">Next Page</button>
+    </div>
 
-      <!-- Search Results Card List -->
-      <div class="search-results" ref="searchResults">
-        <div class="mui-panel" v-for="hit in searchResults" v-on:click="showBookModal(hit)">
-          <div class="mui--text-title" v-html="hit.highlight.text[0]"></div>
-          <div class="mui-divider"></div>
-          <div class="mui--text-subhead">{{ hit._source.title }} - {{ hit._source.author }}</div>
-          <div class="mui--text-caption">Location {{ hit._source.location }}</div>
-        </div>
-      </div>
-
-      <!-- Bottom Pagination Card -->
-      <div class="mui-panel pagination-panel">
-          <button class="mui-btn mui-btn--flat" v-on:click="prevResultsPage()">Prev Page</button>
-          <button class="mui-btn mui-btn--flat" v-on:click="nextResultsPage()">Next Page</button>
-      </div>
-
-      <!-- INSERT BOOK MODAL HERE -->
-
-  </div>
-  <script src="https://cdn.muicss.com/mui-0.9.28/js/mui.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.3/vue.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.17.0/axios.min.js"></script>
-  <script src="app.js"></script>
+	<!-- INSERT BOOK MODAL HERE -->
+</div>
+<script src="https://cdn.muicss.com/mui-0.9.28/js/mui.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.3/vue.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.17.0/axios.min.js"></script>
+<script src="/app.js"></script>
 </body>
 </html>
 ```
@@ -605,14 +795,15 @@ Add the following to a new file, `/public/index.html`.
 Add a new file, `/public/styles.css`, with some custom UI styling.
 
 ```css
-body { font-family: 'Cardo', serif; }
+body { font-family: 'EB Garamond', serif; }
 
-.mui-textfield > input, .mui-btn, .mui-panel > .mui--text-headline {
+.mui-textfield > input, .mui-btn, .mui--text-subhead, .mui-panel > .mui--text-headline {
   font-family: 'Open Sans', sans-serif;
 }
 
+.all-caps { text-transform: uppercase; }
 .app-container { padding: 16px; }
-.search-results em { font-weight: bold }
+.search-results em { font-weight: bold; }
 .book-modal > button { width: 100%; }
 .search-results .mui-divider { margin: 14px 0; }
 
@@ -639,6 +830,11 @@ body { font-family: 'Cardo', serif; }
   margin-bottom: 48px;
 }
 
+.paragraphs-container .mui--text-body1, .paragraphs-container .mui--text-body2 {
+  font-size: 1.8rem;
+  line-height: 35px;
+}
+
 .book-modal {
   width: 100%;
   height: 100%;
@@ -657,6 +853,17 @@ body { font-family: 'Cardo', serif; }
   justify-content: space-between;
 }
 
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.locations-label {
+  text-align: center;
+  margin: 8px;
+}
+
 .modal-footer {
   position: fixed;
   bottom: 0;
@@ -667,15 +874,18 @@ body { font-family: 'Cardo', serif; }
   background: white;
 }
 ```
-<br>
 
 ### Try it out
 
-Try running `npm run dev` on the command line.  This will start two process - the node.js API will be served from port 3000, and the frontend app will be served from port 8080.
+Try running `npm run serve` on the command line.  This will serve the frontend app in the `public` directory to your localhost port 8080. In a seperate terminal process, run `npm start` to start the node webserver on localhost port 3000.
+
+> If you are using the provided Docker config, there is already an Nginx server container serving the `public` directory to port 8080, and a Node server running the app at port 3000, so there's no neeed to run the npm commands.
 
 Open `localhost:8080` in your web browser, you should see a simple search interface with paginated results.  Try typing in the top search bar to find matches from different terms.
 
-If you try clicking on any results nothing happens - we still have one more feature to add to the app.
+{{ add screenshot }}
+
+If you try clicking on any result, nothing happens - we still have one more feature to add to the app.
 
 ## Page Previews
 
@@ -685,30 +895,28 @@ It would be nice to be able to click on each search result, and view it in the c
 
 First, we'll need to define a simple query to get a range of paragraphs from a given book.
 
-Add the following functions to the `module.exports` block in `search.js`.
+AddGet the following functions to the `module.exports` block in `search.js`.
 
 ```javascript
-/** Get the specified range of paragraphs from a book */
-getParagraphs (bookTitle, startLocation, endLocation) {
-  const filter = [
-    { term: { title: bookTitle } },
-    { range: { location: { gte: startLocation, lte: endLocation } } }
-  ]
+  /** Get the specified range of paragraphs from a book */
+  getParagraphs (bookTitle, startLocation, endLocation) {
+    const filter = [
+      { term: { title: bookTitle } },
+      { range: { location: { gte: startLocation, lte: endLocation } } }
+    ]
 
-  const body = {
-    size: endLocation - startLocation,
-    sort: { paragraph: 'asc' },
-    query: { bool: { filter } }
+    const body = {
+      size: endLocation - startLocation,
+      sort: { paragraph: 'asc' },
+      query: { bool: { filter } }
+    }
+
+    body.sort = { location: 'asc' }
+    body.size = endLocation - startLocation
+
+    return client.search({ index, type, body })
   }
-
-  body.sort = { location: 'asc' }
-  body.size = endLocation - startLocation
-
-  return client.search({ index, type, body })
-}
 ```
-<br>
-
 
 This new function will return an ordered array of paragraphs between the start and end locations of a given book.
 
@@ -716,7 +924,7 @@ This new function will return an ordered array of paragraphs between the start a
 
 Now, let's link this function to an API endpoint.
 
-Add the following to `server.js`, below the first `/search` endpoint.
+Add the following to `server.js`, below the original `/search` endpoint.
 
 ```javascript
 /**
@@ -741,7 +949,6 @@ router.get('/paragraphs',
   }
 )
 ```
-<br>
 
 ### Add UI functionality
 
@@ -750,46 +957,44 @@ Now that our new endpoints are in place, let's add some frontend funcationality 
 Add the following functions to the `methods` block of `/public/app.js`.
 
 ```javascript
-/** Call the API to get current page of paragraphs */
-async getParagraphs (bookTitle, offset) {
-  try {
-    this.bookOffset = offset
-    const start = this.bookOffset
-    const end = this.bookOffset + 10
-    const response = await axios.get(`${this.baseUrl}/paragraphs`, { params: { bookTitle, start, end } })
-    return response.data.hits.hits
-  } catch (err) {
-    console.error(err)
-  }
-},
-/** Get next page (next 10 paragraphs) of selected book */
-async nextBookPage () {
-  this.$refs.bookModal.scrollTop = 0
-  this.paragraphs = await this.getParagraphs(this.selectedParagraph._source.title, this.bookOffset + 10)
-},
-/** Get previous page (previous 10 paragraphs) of selected book */
-async prevBookPage () {
-  this.$refs.bookModal.scrollTop = 0
-  this.paragraphs = await this.getParagraphs(this.selectedParagraph._source.title, this.bookOffset - 10)
-},
-/** Display paragraphs from selected book in modal window */
-async showBookModal (searchHit) {
-  try {
-    document.body.style.overflow = 'hidden';
-    this.selectedParagraph = searchHit
-    this.paragraphs = await this.getParagraphs(searchHit._source.title, searchHit._source.location - 5)
-  } catch (err) {
-    console.error(err)
-  }
-},
-/** Close the book detail modal */
-closeBookModal () {
-  document.body.style.overflow = 'auto';
-  this.selectedParagraph = null
-}
+    /** Call the API to get current page of paragraphs */
+    async getParagraphs (bookTitle, offset) {
+      try {
+        this.bookOffset = offset
+        const start = this.bookOffset
+        const end = this.bookOffset + 10
+        const response = await axios.get(`${this.baseUrl}/paragraphs`, { params: { bookTitle, start, end } })
+        return response.data.hits.hits
+      } catch (err) {
+        console.error(err)
+      }
+    },
+    /** Get next page (next 10 paragraphs) of selected book */
+    async nextBookPage () {
+      this.$refs.bookModal.scrollTop = 0
+      this.paragraphs = await this.getParagraphs(this.selectedParagraph._source.title, this.bookOffset + 10)
+    },
+    /** Get previous page (previous 10 paragraphs) of selected book */
+    async prevBookPage () {
+      this.$refs.bookModal.scrollTop = 0
+      this.paragraphs = await this.getParagraphs(this.selectedParagraph._source.title, this.bookOffset - 10)
+    },
+    /** Display paragraphs from selected book in modal window */
+    async showBookModal (searchHit) {
+      try {
+        document.body.style.overflow = 'hidden'
+        this.selectedParagraph = searchHit
+        this.paragraphs = await this.getParagraphs(searchHit._source.title, searchHit._source.location - 5)
+      } catch (err) {
+        console.error(err)
+      }
+    },
+    /** Close the book detail modal */
+    closeBookModal () {
+      document.body.style.overflow = 'auto'
+      this.selectedParagraph = null
+    }
 ```
-<br>
-
 
 These five functions provide the logic for downloading and paginating through pages (10 paragraphs each) in a book.
 
@@ -797,39 +1002,44 @@ Now we just need to add a UI to display the book pages.  Add this markup below t
 
 ```html
 <!-- Book Paragraphs Modal Window -->
-<div v-if="selectedParagraph" ref="bookModal" class="book-modal">
-  <div class="paragraphs-container">
-    <!-- Book Section Metadata -->
-    <div class="mui--text-headline">{{ selectedParagraph._source.title }} - {{ selectedParagraph._source.author }}</div>
-    <div class="mui--text-subhead">Locations {{ bookOffset - 5 }} to {{ bookOffset + 5 }}</div>
-    <div class="mui-divider"></div>
-    <br>
+    <div v-if="selectedParagraph" ref="bookModal" class="book-modal">
+      <div class="paragraphs-container">
+        <!-- Book Section Metadata -->
+        <div class="title-row">
+          <div class="mui--text-display2 all-caps">{{ selectedParagraph._source.title }}</div>
+          <div class="mui--text-display1">{{ selectedParagraph._source.author }}</div>
+        </div>
+        <br>
+        <div class="mui-divider"></div>
+        <div class="mui--text-subhead locations-label">Locations {{ bookOffset - 5 }} to {{ bookOffset + 5 }}</div>
+        <div class="mui-divider"></div>
+        <br>
 
-    <!-- Book Paragraphs -->
-    <div v-for="paragraph in paragraphs">
-      <div v-if="paragraph._source.location === selectedParagraph._source.location" class="mui--text-body2">
-        <strong>{{ paragraph._source.text }}</strong>
+        <!-- Book Paragraphs -->
+        <div v-for="paragraph in paragraphs">
+          <div v-if="paragraph._source.location === selectedParagraph._source.location" class="mui--text-body2">
+            <strong>{{ paragraph._source.text }}</strong>
+          </div>
+          <div v-else class="mui--text-body1">
+            {{ paragraph._source.text }}
+          </div>
+          <br>
+        </div>
       </div>
-      <div v-else class="mui--text-body1">
-        {{ paragraph._source.text }}
+
+      <!-- Book Pagination Footer -->
+      <div class="modal-footer">
+        <button class="mui-btn mui-btn--flat" v-on:click="prevBookPage()">Prev Page</button>
+        <button class="mui-btn mui-btn--flat" v-on:click="closeBookModal()">Close</button>
+        <button class="mui-btn mui-btn--flat" v-on:click="nextBookPage()">Next Page</button>
       </div>
-      <br>
     </div>
-  </div>
-
-  <!-- Book Pagination Footer -->
-  <div class="modal-footer">
-    <button class="mui-btn mui-btn--flat" v-on:click="prevBookPage()">Prev Page</button>
-    <button class="mui-btn mui-btn--flat" v-on:click="closeBookModal()">Close</button>
-    <button class="mui-btn mui-btn--flat" v-on:click="nextBookPage()">Next Page</button>
-  </div>
-</div>
 ```
-<br>
-
 
 Run `npm run dev` again and open up `localhost:8080`.  When you click on a search result, you are now able to view the surrounding paragraphs, and even to read the rest of the book to completion if you're entertained by what you find.
 
 ## Conclusion
 
 ### Syncing with Databases
+In many more adavanced apps, storing all of the data in Elasticsearch is not a possibility.  While it is possible to use ES as a primary transaction database for an app, this is generally not recommended due to the lack of ACID complience and the less-standard schema and query 
+
