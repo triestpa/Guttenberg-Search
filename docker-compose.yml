@@ -1,14 +1,12 @@
 version: '3'
 
 services:
-
-  # Node.js App
-  api:
-    build: .
+  api: # Node.js App
     container_name: gs-api
+    build: .
     ports:
-      - "3000:3000"
-      - "9229:9229"
+      - "3000:3000" # Expose API port
+      - "9229:9229" # Expose Node process debug port (disable in production)
     environment: # Set ENV vars
      - NODE_ENV=local
      - ES_HOST=elasticsearch
@@ -16,23 +14,21 @@ services:
     volumes: # Attach local book data directory
       - ./books:/usr/src/app/books
 
-  # Nginx Server For Frontend App
-  frontend:
-    image: nginx
+  frontend: # Nginx Server For Frontend App
     container_name: gs-frontend
+    image: nginx
     volumes: # Serve local "public" dir
       - ./public:/usr/share/nginx/html
     ports:
-      - "8080:80"
+      - "8080:80" # Forward site to localhost:8080
 
-  # Elasticsearch Instance
-  elasticsearch:
+  elasticsearch: # Elasticsearch Instance
     container_name: gs-search
     image: docker.elastic.co/elasticsearch/elasticsearch:6.1.1
     volumes: # Persist ES data in local "esdata" directory
       - ./esdata:/usr/share/elasticsearch/data
     environment:
       - discovery.type=single-node
-    ports:
+    ports: # Expose ElasticSearch ports
       - "9300:9300"
       - "9200:9200"
