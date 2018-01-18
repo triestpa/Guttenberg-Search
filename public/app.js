@@ -32,18 +32,6 @@ const vm = new Vue ({
       this.numHits = response.data.hits.total
       return response.data.hits.hits
     },
-    /** Call the API to get current page of paragraphs */
-    async getParagraphs (bookTitle, offset) {
-      try {
-        this.bookOffset = offset
-        const start = this.bookOffset
-        const end = this.bookOffset + 10
-        const response = await axios.get(`${this.baseUrl}/paragraphs`, { params: { bookTitle, start, end } })
-        return response.data.hits.hits
-      } catch (err) {
-        console.error(err)
-      }
-    },
     /** Get next page of search results */
     async nextResultsPage () {
       if (this.numHits > 10) {
@@ -55,10 +43,22 @@ const vm = new Vue ({
     },
     /** Get previous page of search results */
     async prevResultsPage () {
-      this.searchOffset -=  10
+      this.searchOffset -= 10
       if (this.searchOffset < 0) { this.searchOffset = 0 }
       this.searchResults = await this.search()
       document.documentElement.scrollTop = 0
+    },
+    /** Call the API to get current page of paragraphs */
+    async getParagraphs (bookTitle, offset) {
+      try {
+        this.bookOffset = offset
+        const start = this.bookOffset
+        const end = this.bookOffset + 10
+        const response = await axios.get(`${this.baseUrl}/paragraphs`, { params: { bookTitle, start, end } })
+        return response.data.hits.hits
+      } catch (err) {
+        console.error(err)
+      }
     },
     /** Get next page (next 10 paragraphs) of selected book */
     async nextBookPage () {
@@ -73,7 +73,7 @@ const vm = new Vue ({
     /** Display paragraphs from selected book in modal window */
     async showBookModal (searchHit) {
       try {
-        document.body.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden'
         this.selectedParagraph = searchHit
         this.paragraphs = await this.getParagraphs(searchHit._source.title, searchHit._source.location - 5)
       } catch (err) {
@@ -82,7 +82,7 @@ const vm = new Vue ({
     },
     /** Close the book detail modal */
     closeBookModal () {
-      document.body.style.overflow = 'auto';
+      document.body.style.overflow = 'auto'
       this.selectedParagraph = null
     }
   }
