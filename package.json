@@ -3,8 +3,6 @@
   "version": "0.0.1",
   "description": "Source code for ElasticSearch tutorial using 100 classic open source books.",
   "scripts": {
-    "dev": "npm run serve & npm start",
-    "serve": "http-server ./public",
     "start": "node --inspect=0.0.0.0:9229 server/app.js"
   },
   "repository": {
@@ -23,8 +21,5 @@
     "koa": "2.4.1",
     "koa-joi-validate": "0.5.1",
     "koa-router": "7.2.1"
-  },
-  "devDependencies": {
-    "http-server": "0.10.0"
   }
 }
