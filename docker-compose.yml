@@ -26,9 +26,12 @@ services:
     container_name: gs-search
     image: docker.elastic.co/elasticsearch/elasticsearch:6.1.1
     volumes: # Persist ES data in local "esdata" directory
-      - ./esdata:/usr/share/elasticsearch/data
+      - esdata:/usr/share/elasticsearch/data
     environment:
       - discovery.type=single-node
     ports: # Expose ElasticSearch ports
       - "9300:9300"
       - "9200:9200"
+
+volumes:
+  esdata:
