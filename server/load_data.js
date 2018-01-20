@@ -33,7 +33,7 @@ function parseBookFile (filePath) {
 
 /** Bulk index the book data in ElasticSearch */
 async function insertBookData (title, author, paragraphs) {
-  const bulkOps = [] // Array to store bulk operations
+  let bulkOps = [] // Array to store bulk operations
 
   // Add an index operation for each section in the book
   for (let i = 0; i < paragraphs.length; i++) {
@@ -47,9 +47,15 @@ async function insertBookData (title, author, paragraphs) {
       location: i,
       text: paragraphs[i]
     })
+
+    if (i > 0 && i % 500 === 0) { // Do bulk insert after every 500 paragraphs
+      await esConnection.client.bulk({ body: bulkOps })
+      bulkOps = []
+      console.log(`Indexed Paragraphs ${i - 500} - ${i}`)
+    }
   }
 
-  // Execute bulk ops array
+  // Insert remainder of bulk ops array
   await esConnection.client.bulk({ body: bulkOps })
 }
 
