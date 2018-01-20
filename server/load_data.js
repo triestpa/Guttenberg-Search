@@ -48,10 +48,10 @@ async function insertBookData (title, author, paragraphs) {
       text: paragraphs[i]
     })
 
-    if (i > 0 && i % 1000 === 0) { // Do bulk insert after every 1000 paragraphs
+    if (i > 0 && i % 500 === 0) { // Do bulk insert after every 500 paragraphs
       await esConnection.client.bulk({ body: bulkOps })
       bulkOps = []
-      console.log(`Indexed Paragraphs ${i - 999} - ${i}`)
+      console.log(`Indexed Paragraphs ${i - 499} - ${i}`)
     }
   }
 
