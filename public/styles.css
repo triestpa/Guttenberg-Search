@@ -62,6 +62,14 @@ body { font-family: 'EB Garamond', serif; }
   align-items: flex-end;
 }
 
+@media (max-width: 600px) {
+  .title-row{ 
+    flex-direction: column; 
+    text-align: center;
+    align-items: center
+  }
+}
+
 .locations-label {
   text-align: center;
   margin: 8px;
