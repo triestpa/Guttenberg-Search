@@ -2,11 +2,12 @@ const elasticsearch = require('elasticsearch')
 
 // Core ES variables for this project
 const index = 'library'
-const type = 'novel'
+const type = 'book'
 const port = 9200
 const host = process.env.ES_HOST || 'localhost'
 const client = new elasticsearch.Client({ host: { host, port } })
 
+/** Check the ES connection status */
 async function checkConnection () {
   let isConnected = false
   while (!isConnected) {

@@ -26,12 +26,9 @@ module.exports = {
 
     const body = {
       size: endLocation - startLocation,
-      sort: { paragraph: 'asc' },
+      sort: { location: 'asc' },
       query: { bool: { filter } }
     }
-
-    body.sort = { location: 'asc' }
-    body.size = endLocation - startLocation
 
     return client.search({ index, type, body })
   }
