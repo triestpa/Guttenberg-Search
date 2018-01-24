@@ -14,7 +14,7 @@ The source code for the application is 100% open-source and can be found at the 
 
 Adding fast, flexible, and accurate full-text search to apps can be a challenge.  Most mainstream databases, such as [PostgreSQL](https://www.postgresql.org/) and [MongoDB](https://www.mongodb.com/), offer very basic text searching capabilities due to limitations on their existing query and index structures.  In order to high quality full-text search, a separate datastore is often the best option.  [Elasticsearch](https://www.elastic.co/) is a leading open-source datastore that is optimized to perform incredibly flexible and fast full-text search.
 
-We'll be using [Docker](https://www.docker.com/)  to setup our project environment and dependencies.  Docker is a containerization engine used by the likes of Uber, Spotify, ADP, and Paypal.  A major advantage of building a containerized app is that the project setup is virtually the same on Windows, macOS, and Linux - which makes writing this tutorial quite a bit simpler for me.  Don't worry if you've never used Docker, we'll go through the full project configuration further down.
+We'll be using [Docker](https://www.docker.com/)  to setup our project environment and dependencies.  Docker is a containerization engine used by the likes of [Uber](https://www.uber.com/), [Spotify](https://www.spotify.com/us/), [ADP](https://www.adp.com/), and [Paypal](https://www.paypal.com/us/home).  A major advantage of building a containerized app is that the project setup is virtually the same on Windows, macOS, and Linux - which makes writing this tutorial quite a bit simpler for me.  Don't worry if you've never used Docker, we'll go through the full project configuration further down.
 
 We'll also be using [Node.js](https://nodejs.org/en/) (with the [Koa](http://koajs.com/) framework),  and [Vue.js](https://vuejs.org/) to build our search API and frontend web app respectively.
 
@@ -58,7 +58,7 @@ This inverted-index data structure allows us to very quickly find, say, all of t
 
 ### Docker
 
-We'll be using [Docker](https://www.docker.com/) to manage the environments and dependencies for this project.  Docker is a containerization engine that allows applications to be run in isolated environments, unaffected by the host operating system and local development environment.  Many "web scale" companies run a majority of their server infrastructure in containers now, due to the increased flexibility and composability of containerized application components.
+We'll be using [Docker](https://www.docker.com/) to manage the environments and dependencies for this project.  Docker is a containerization engine that allows applications to be run in isolated environments, unaffected by the host operating system and local development environment.  Many web scale companies run a majority of their server infrastructure in containers now, due to the increased flexibility and composability of containerized application components.
 
 ![Docker Logo](https://storage.googleapis.com/cdn.patricktriest.com/blog/images/posts/elastic-library/docker.png)
 
@@ -188,18 +188,15 @@ const Koa = require('koa')
 const app = new Koa()
 
 app.use(async (ctx, next) => {
-    ctx.body = 'Hello World From the Backend Container'
+  ctx.body = 'Hello World From the Backend Container'
 })
 
 const port = process.env.PORT || 3000
 
-app
-  .use(router.routes())
-  .use(router.allowedMethods())
-  .listen(port, err => {
-    if (err) console.error(err)
-    console.log(`App Listening on Port ${port}`)
-  })
+app.listen(port, err => {
+  if (err) console.error(err)
+  console.log(`App Listening on Port ${port}`)
+})
 ```
 <br>
 
@@ -240,15 +237,23 @@ This file defines the application start command and the Node.js package dependen
 
 ### Try it Out
 
-Everything is in place now to test out each component of the app.  From the base directory, run `docker-compose up`.  This will build and launch the three application containers.
+Everything is in place now to test out each component of the app.  From the base directory, run `docker-compose build`, which will build our Node.js application container.  
+
+![docker build output](https://cdn.patricktriest.com/blog/images/posts/elastic-library/sample_0_3.png)
+
+Next, run `docker-compose up` to launch our entire application stack. 
+
+![docker compose output](https://cdn.patricktriest.com/blog/images/posts/elastic-library/sample_0_2.png)
 
 > This step might take a few minutes since Docker has to download the base images for each container.  In subsequent runs, starting the app should be nearly instantaneous, since the required images will have already been downloaded.
 
-{{ add output screenshots }}
-
 Try visiting `localhost:8080` in your browser - you should see a simple "Hello World" webpage.
 
+![frontend sample output](https://cdn.patricktriest.com/blog/images/posts/elastic-library/sample_0_0.png)
+
 Visit `localhost:3000` to verify that our Node server returns it's own "Hello World" message.
+
+![backend sample output](https://cdn.patricktriest.com/blog/images/posts/elastic-library/sample_0_1.png)
 
 Finally, visit `localhost:9200` to check that Elasticsearch is running.  It should return information similar to this.
 
@@ -276,8 +281,6 @@ If all three URLs display data successfully, congrats!  The entire containerized
 ## Connect To Elasticsearch
 
 The first thing that we'll need to do in our app is connect to our local Elasticsearch instance.
-
-Create a new directory called `server` for the Node.js server code.
 
 Add the following Elasticsearch initialization code to a new file `server/connection.js`.
 
@@ -310,34 +313,34 @@ checkConnection()
 ```
 <br>
 
-{{ RESTART APP FIRST }}
+Let's rebuild our Node app now that we've made changes, using `docker-compose build`.  Next run `docker-compose up -d` to start the application stack as a background daemon process.
 
-Run `docker exec gs-api "node" "server/connection.js"` on the command line in order to run our script within the container.  You should see some system output similar to the following.
+With the app started, run `docker exec gs-api "node" "server/connection.js"` on the command line in order to run our script within the container.  You should see some system output similar to the following.
 
 ```javascript
-{
-  cluster_name: 'elasticsearch_patrick',
+{ cluster_name: 'docker-cluster',
   status: 'yellow',
   timed_out: false,
   number_of_nodes: 1,
   number_of_data_nodes: 1,
-  active_primary_shards: 16,
-  active_shards: 16,
+  active_primary_shards: 1,
+  active_shards: 1,
   relocating_shards: 0,
   initializing_shards: 0,
-  unassigned_shards: 16,
+  unassigned_shards: 1,
   delayed_unassigned_shards: 0,
   number_of_pending_tasks: 0,
   number_of_in_flight_fetch: 0,
   task_max_waiting_in_queue_millis: 0,
-  active_shards_percent_as_number: 50
-}
+  active_shards_percent_as_number: 50 }
 ```
 <br>
 
+Go ahead and remove the `checkConnection()` call at the bottom before moving on, since in our final app we'll be making that call from outside the connection module.
+
 ### Add Helper Function To Reset Index
 
-In `connection.js` add the following function, in order to provide an easy way to reset our Elasticsearch index.
+In `server/connection.js` add the following function below `checkConnection`, in order to provide an easy way to reset our Elasticsearch index.
 
 ```javascript
 /** Clear the index, recreate it, and add mappings */
@@ -354,7 +357,7 @@ async function resetIndex (index) {
 
 ### Add Book Schema
 
-Next, we'll want to add a "mapping" for the book data schema.  Add the following function to `connection.js`.
+Next, we'll want to add a "mapping" for the book data schema.  Add the following function below `resetIndex` in `server/connection.js`.
 
 ```javascript
 /** Add book section schema mapping to ES */
@@ -396,6 +399,13 @@ I've zipped the 100 books into a file that you can download here -
 https://cdn.patricktriest.com/data/books.zip
 
 Extract this file into a `books/` directory in your project.
+
+If you want, you can do this within using the following commands (requires [wget](https://www.gnu.org/software/wget/) and ["The Unarchiver" CLI](https://theunarchiver.com/command-line)).
+
+```bash
+wget https://cdn.patricktriest.com/data/books.zip
+unar books.zip
+```
 
 ### Preview A Book
 
@@ -462,15 +472,23 @@ readAndInsertBooks()
 ```
 <br>
 
-Try running `node load_data.js`.  You should see the Elasticsearch status output, followed by `Found 100 Books`.
+We'll use a shortcut command to rebuild our Node.js app and update the running container.
+
+Run `docker-compose up -d --build` to update the application.  This is a shortcut for running `docker-compose build` and `docker-compose up -d`.
+
+![docker build output](https://cdn.patricktriest.com/blog/images/posts/elastic-library/sample_1_0.png)
+
+Run`docker exec gs-api "node" "server/load_data.js"` in order to run our `load_data` script within the container.  You should see the Elasticsearch status output, followed by `Found 100 Books`.
 
 After this, the script will exit due to an error because we're calling a helper function (`parseBookFile`) that we have not yet defined.
+
+![docker exec output](https://cdn.patricktriest.com/blog/images/posts/elastic-library/sample_1_1.png)
 
 ### Read Data File
 
 Next, we'll read the metadata and content for each book.
 
-Define a new function in `load_data.js`.
+Define a new function in `server/load_data.js`.
 
 ```javascript
 /** Read an individual book text file, and extract the title, author, and paragraphs */
@@ -515,16 +533,12 @@ This function performs a few important tasks.
 
 As a return value, we'll form an object containing the book's title, author, and an array of paragraphs within the book.
 
-Try running the `load_data.js` script again, and you should see the same output as before, this time with three extra lines at the end of the output.
+Run `docker-compose up -d --build` and `docker exec gs-api "node" "server/load_data.js"` again, and you should see the same output as before, this time with three extra lines at the end of the output.
 
-```text
-Reading File - 1400-0.txt
-Reading Book - Great Expectations By Charles Dickens
-Parsed 3901 Paragraphs
-```
+![docker exec output](https://cdn.patricktriest.com/blog/images/posts/elastic-library/sample_2_0.png)
 <br>
 
-The script will again end with an error since we still have to define one more helper function.
+Success!  Our script successfully parsed the title and author from the text file.  The script will again end with an error since we still have to define one more helper function.
 
 ### Index Datafile in ES
 
@@ -568,9 +582,9 @@ This function will index each paragraph of the book, with author, title, and par
 
 > We're bulk indexing the paragraphs in batches, instead of inserting all of them at once.  This was a last minute optimization which I added in order for the app to run on the low-ish memory (1.7 GB) host machine that serves `search.patricktriest.com`.  If you have a reasonable amount of RAM (4+ GB), you probably don't need to worry about batching each bulk upload,
 
-Run our `node server/load_data.js` again - you should now see a full output of 100 books being parsed and inserted in Elasticsearch.  This might take a minute or so.
+Run `docker-compose up -d --build` and `docker exec gs-api "node" "server/load_data.js"` one more time - you should now see a full output of 100 books being parsed and inserted in Elasticsearch.  This might take a minute or so.
 
-{{ add screenshot }}
+![data loading output](https://cdn.patricktriest.com/blog/images/posts/elastic-library/sample_3_0.png)
 
 ## Querying
 
@@ -671,14 +685,7 @@ Here are query fields broken down -
 - `fuzziness` - Adjusts tolerance for spelling mistakes, `auto` defaults to `fuzziness: 2`.  A higher fuzziness will allow for more corrections in result hits.  For instance, `fuzziness: 1` would allow `Patricc` to return `Patrick` as a match.
 - `highlights` - Returns an extra field with the result, containing HTML to display the exact text subset and terms that were matched with the query.
 
-You could test the query by adding a function call at the bottom.
-
-```javascript
-module.exports.queryTerm('patrick').then(results => results.hits.hits.forEach(console.log))
-```
-<br>
-
-Running `node search.js` should now log each of the first 10 search results for the term.
+Feel free to play around with these parameters, and to customize the search query further by exploring the [Elastic Full-Text Query DSL](https://www.elastic.co/guide/en/elasticsearch/reference/current/full-text-queries.html).
 
 ## API
 
@@ -719,6 +726,8 @@ app.use(async (ctx, next) => {
 
 // ADD ENDPOINTS HERE
 
+const port = process.env.PORT || 3000
+
 app
   .use(router.routes())
   .use(router.allowedMethods())
@@ -729,13 +738,13 @@ app
 ```
 <br>
 
-This code will import our server dependencies and set up simple logging and error handling for a Koa.js Node API server.
+This code will import our server dependencies and set up simple logging and error handling for a [Koa.js](http://koajs.com/ Node API server.
 
 ### Link endpoint with queries
 
 Next, we'll add an endpoint to our server in order to expose our Elasticsearch query function.
 
-Insert the following code below the `// ADD ENDPOINTS HERE` comment.
+Insert the following code below the `// ADD ENDPOINTS HERE` comment in `server/app.js`.
 
 ```javascript
 /**
@@ -750,15 +759,63 @@ router.get('/search', async (ctx, next) => {
 ```
 <br>
 
-Try running the Node server with `npm start`.  You should see terminal output confirming that the app is listening at port 3000.  In your browser, try calling the search endpoint.  For example, this request would search the entire library for passages mentioning "Patrick" - `http://localhost:3000/search?term=patrick`
+Restart the app using `docker-compose up -d --build`.  In your browser, try calling the search endpoint.  For example, this request would search the entire library for passages mentioning "Java" - `http://localhost:3000/search?term=java`
 
-ADD SCREENSHOT
+The result will look quite similar to the response from earlier when we called the Elasticsearch HTTP interface directly.
+
+```json
+{
+    "took": 242,
+    "timed_out": false,
+    "_shards": {
+        "total": 5,
+        "successful": 5,
+        "skipped": 0,
+        "failed": 0
+    },
+    "hits": {
+        "total": 93,
+        "max_score": 13.356944,
+        "hits": [{
+            "_index": "library",
+            "_type": "novel",
+            "_id": "eHYHJmEBpQg9B4622421",
+            "_score": 13.356944,
+            "_source": {
+                "author": "Charles Darwin",
+                "title": "On the Origin of Species",
+                "location": 1080,
+                "text": "Java, plants of, 375."
+            },
+            "highlight": {
+                "text": ["<em>Java</em>, plants of, 375."]
+            }
+        }, {
+            "_index": "library",
+            "_type": "novel",
+            "_id": "2HUHJmEBpQg9B462xdNg",
+            "_score": 9.030668,
+            "_source": {
+                "author": "Unknown Author",
+                "title": "The King James Bible",
+                "location": 186,
+                "text": "10:4 And the sons of Javan; Elishah, and Tarshish, Kittim, and Dodanim."
+            },
+            "highlight": {
+                "text": ["10:4 And the sons of <em>Javan</em>; Elishah, and Tarshish, Kittim, and Dodanim."]
+            }
+        }
+        ...
+      ]
+   }
+}
+```
 
 ### Input validation
 
 This endpoint is still brittle - we are not doing any checks on the request parameters, so invalid or missing values would result in a server error.
 
-We'll add some middleware to the endpoint in order to validate input parameters using Joi and the Koa-Joi-Validate library.
+We'll add some middleware to the endpoint in order to validate input parameters using [Joi](https://github.com/hapijs/joi) and the [Koa-Joi-Validate](https://github.com/triestpa/koa-joi-validate) library.
 
 ```javascript
 /**
@@ -782,7 +839,9 @@ router.get('/search',
 )
 ```
 
-Now, if you restart the server and make a request with a missing term(`http://localhost:3000/search`), you will get back an HTTP 400 error with a relevant message.
+Now, if you restart the server and make a request with a missing term(`http://localhost:3000/search`), you will get back an HTTP 400 error with a relevant message, such as `Invalid URL Query - child "term" fails because ["term" is required]`.
+
+To view live logs from the Node app, you can run `docker-compose logs -f api`.
 
 ## Front-End Application
 
@@ -845,13 +904,14 @@ const vm = new Vue ({
       this.searchResults = await this.search()
       document.documentElement.scrollTop = 0
     }
+  }
 })
 ```
 <br>
 
 The app is pretty simple - we're just defining some shared data properties, and adding methods to retrieve and paginate through search results.  The search input is debounced by 100ms, to prevent the API from being called with every keystroke.
 
-Explaining how Vue.js works is outside the scope of this tutorial, but this probably won't look too crazy if you've used Angular or React.  Here's a good tutorial on Vue if you want something quick to get started with [ ADD VUE TUTORIAL ]
+Explaining how Vue.js works is outside the scope of this tutorial, but this probably won't look too crazy if you've used Angular or React.  If you're completely unfamiliar with Vue, and if you want something quick to get started with, I would recommend the official quick-start guide - https://vuejs.org/v2/guide/
 
 ### HTML
 
@@ -868,7 +928,7 @@ Replace our placeholder `/public/index.html` file with the following contents, i
   <link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.min.css" rel="stylesheet" type="text/css" />
   <link href="https://cdn.muicss.com/mui-0.9.20/css/mui.min.css" rel="stylesheet" type="text/css" />
   <link href="https://fonts.googleapis.com/css?family=EB+Garamond:400,700|Open+Sans" rel="stylesheet">
-  <link href="/styles.css" rel="stylesheet" />
+  <link href="styles.css" rel="stylesheet" />
 </head>
 <body>
 <div class="app-container" id="vue-instance">
@@ -913,7 +973,7 @@ Replace our placeholder `/public/index.html` file with the following contents, i
 <script src="https://cdn.muicss.com/mui-0.9.28/js/mui.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.3/vue.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.17.0/axios.min.js"></script>
-<script src="/app.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
 ```
@@ -1017,7 +1077,9 @@ body { font-family: 'EB Garamond', serif; }
 
 Open `localhost:8080` in your web browser, you should see a simple search interface with paginated results.  Try typing in the top search bar to find matches from different terms.
 
-{{ add screenshot }}
+![preview webapp](https://cdn.patricktriest.com/blog/images/posts/elastic-library/sample_4_0.png)
+
+> You **do not* have to re-run the `docker-compose up` command for the changes to take effect.  The local `public` directory is mounted to our Nginx fileserver container, so frontend changes on the local system will be automatically reflected within the containerized app.
 
 If you try clicking on any result, nothing happens - we still have one more feature to add to the app.
 
@@ -1029,7 +1091,7 @@ It would be nice to be able to click on each search result and view it in the co
 
 First, we'll need to define a simple query to get a range of paragraphs from a given book.
 
-Add the following function to the `module.exports` block in `search.js`.
+Add the following function to the `module.exports` block in `server/search.js`.
 
 ```javascript
 /** Get the specified range of paragraphs from a book */
@@ -1056,7 +1118,7 @@ This new function will return an ordered array of paragraphs between the start a
 
 Now, let's link this function to an API endpoint.
 
-Add the following to `server.js`, below the original `/search` endpoint.
+Add the following to `server/app.js`, below the original `/search` endpoint.
 
 ```javascript
 /**
@@ -1130,12 +1192,12 @@ Add the following functions to the `methods` block of `/public/app.js`.
 ```
 <br>
 
-These five functions provide the logic for downloading and paginating through pages (10 paragraphs each) in a book.
+These five functions provide the logic for downloading and paginating through pages (ten paragraphs each) in a book.
 
 Now we just need to add a UI to display the book pages.  Add this markup below the `<!-- INSERT BOOK MODAL HERE -->` comment in `/public/index.html`.
 
 ```html
-<!-- Book Paragraphs Modal Window -->
+    <!-- Book Paragraphs Modal Window -->
     <div v-if="selectedParagraph" ref="bookModal" class="book-modal">
       <div class="paragraphs-container">
         <!-- Book Section Metadata -->
@@ -1171,13 +1233,19 @@ Now we just need to add a UI to display the book pages.  Add this markup below t
 ```
 <br>
 
-Run `npm run dev` again and open up `localhost:8080`.  When you click on a search result, you are now able to view the surrounding paragraphs, and even to read the rest of the book to completion if you're entertained by what you find.
+Restart the app server (`docker-compose up -d --build`) again and open up `localhost:8080`.  When you click on a search result, you are now able to view the surrounding paragraphs.  You can now even read the rest of the book to completion if you're entertained by what you find.
+
+![preview webapp book page](https://cdn.patricktriest.com/blog/images/posts/elastic-library/sample_5_0.png)
+
+Congrats, you've completed the tutorial application!
+
+Feel free to compare your local result against the completed sample hosted here - https://search.patricktriest.com/
 
 ## Disadvantages of Elasticsearch
 
 ### Resource Hog
 
-Elasticsearch is computationally demanding.  The [official recomendation](https://www.elastic.co/guide/en/elasticsearch/guide/current/hardware.html) is to run ES on a machine with 64 GB of RAM, and they strongly discourage running it on anything with under 8 GB of RAM.  Elasticsearch is an in-memory datastore, which allows it to return results extremely quickly, but also results in a very significant system memory footprint.  In production, [it is strongly recommended to run multiple Elasticsearch nodes in a cluster](https://www.elastic.co/guide/en/elasticsearch/guide/2.x/distributed-cluster.html)  to allow for high server availability, automatic sharding, and data redundancy in case of a node failure.
+Elasticsearch is computationally demanding.  The [official recommendation](https://www.elastic.co/guide/en/elasticsearch/guide/current/hardware.html) is to run ES on a machine with 64 GB of RAM, and they strongly discourage running it on anything with under 8 GB of RAM.  Elasticsearch is an in-memory datastore, which allows it to return results extremely quickly, but also results in a very significant system memory footprint.  In production, [it is strongly recommended to run multiple Elasticsearch nodes in a cluster](https://www.elastic.co/guide/en/elasticsearch/guide/2.x/distributed-cluster.html)  to allow for high server availability, automatic sharding, and data redundancy in case of a node failure.
 
 I've got our tutorial application running on a $15/month GCP compute instance (at [search.patricktriest.com](https://search.patricktriest.com)) with 1.7 GB of RAM, and it is *just barely* is able to run the Elasticsearch node; sometimes the entire machine freezes up during the initial data-loading step.  Elasticsearch is, in my experience, much more of a resource hog than more traditional databases such as PostgreSQL and MongoDB, and can be significantly more expensive to host as a result.
 
@@ -1187,7 +1255,7 @@ In most applications, storing all of the data in Elasticsearch is not an ideal o
 
 For instance, let's imagine that we're storing our users in a PostgreSQL table, but using Elasticsearch to power our user-search functionality.  If a user, "Albert", decides to change his name to "Al",  we'll need this change to be reflected in both our primary PostgreSQL database and in our auxiliary Elasticsearch cluster.
 
-This can be a tricky integration to get right, and the best answer will depend on your existing stack.  There are a multitude of open-source options available, from [a process to watch a MongoDB operation log](https://github.com/mongodb-labs/mongo-connector) and automatically sync selected changes to ES, to a [PostgresSQL plugin](https://github.com/zombodb/zombodb) to create a custom PSQL-based index that communicates automatically with Elasticsearch.  
+This can be a tricky integration to get right, and the best answer will depend on your existing stack.  There are a multitude of open-source options available, from [a process to watch a MongoDB operation log](https://github.com/mongodb-labs/mongo-connector) and automatically sync detected changes to ES, to a [PostgresSQL plugin](https://github.com/zombodb/zombodb) to create a custom PSQL-based index that communicates automatically with Elasticsearch.  
 
 If none of the available pre-built options work, you could always just add some hooks into your server code to update the Elasticsearch index manually based on database changes.  I would consider this final option to be a last resort, since keeping ES in sync using custom business logic can be complex, and is likely to introduce numerous bugs to the application.
 
@@ -1196,5 +1264,9 @@ The need to sync Elasticsearch with a primary database is more of an architectur
 ## Conclusion
 
 
+
 ### Project Ideas
+- add more of your favorite books
+- add your email - try using the aggregation engine
 - Spell Check API (using fuzzy-search with dictionary dataset)
+- journalism (searching through leaked documents)
