@@ -1,3 +1,7 @@
+
+
+
+
 *How does Wikipedia sort though 5+ million articles to find the most relevant one for your research?*
 
 *How does Facebook find the friend who you're looking for (and whose name you've misspelled), across a userbase of 2+ billion people.*
@@ -117,6 +121,8 @@ services:
     volumes: # Persist ES data in seperate "esdata" volume
       - esdata:/usr/share/elasticsearch/data
     environment:
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - discovery.type=single-node
     ports: # Expose Elasticsearch ports
       - "9300:9300"
@@ -1274,5 +1280,7 @@ Here are some ideas for your own projects.
 - Build a spell checking application by indexing every word in the dictionary to Elasticsearch.
 - Build your own Google-competitor internet search engine by loading the [Common Crawl Corpus](https://aws.amazon.com/public-datasets/common-crawl/) into Elasticsearch (caution - with over 5 billion pages, this can be a very expensive dataset play with).
 - Use Elasticsearch for journalism: search for specific names and terms in recent large-scale document leaks such as the [Panama Papers](https://en.wikipedia.org/wiki/Panama_Papers) and [Paradise Papers](https://en.wikipedia.org/wiki/Paradise_Papers).
+
+The source code for this tutorial application is 100% open-source and can be found at the GitHub repository here - https://github.com/triestpa/guttenberg-search
 
 I hope you enjoyed the tutorial!  Please feel free to post any thoughts, questions, or criticisms in the comments below.
