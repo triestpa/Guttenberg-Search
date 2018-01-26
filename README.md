@@ -1,5 +1,3 @@
-# BUILD A FULL-TEXT SEARCH APP USING DOCKER AND ELASTICSEARCH
-
 *How does Wikipedia sort though 5+ million articles to find the most relevant one for your research?*
 
 *How does Facebook find the friend who you're looking for (and whose name you've misspelled), across a userbase of 2+ billion people.*
@@ -10,6 +8,8 @@ In this tutorial, we'll walk through setting up our own full-text search applica
 
 You can preview a completed version of the tutorial app here - https://search.patricktriest.com
 
+![preview webapp](https://cdn.patricktriest.com/blog/images/posts/elastic-library/sample_4_0.png)
+
 The source code for the application is 100% open-source and can be found at the GitHub repository here - https://github.com/triestpa/guttenberg-search
 
 Adding fast, flexible, and accurate full-text search to apps can be a challenge.  Most mainstream databases, such as [PostgreSQL](https://www.postgresql.org/) and [MongoDB](https://www.mongodb.com/), offer very basic text searching capabilities due to limitations on their existing query and index structures.  In order to high quality full-text search, a separate datastore is often the best option.  [Elasticsearch](https://www.elastic.co/) is a leading open-source datastore that is optimized to perform incredibly flexible and fast full-text search.
@@ -18,15 +18,15 @@ We'll be using [Docker](https://www.docker.com/)  to setup our project environme
 
 We'll also be using [Node.js](https://nodejs.org/en/) (with the [Koa](http://koajs.com/) framework),  and [Vue.js](https://vuejs.org/) to build our search API and frontend web app respectively.
 
-## What is Elasticsearch?
+## 1 - What is Elasticsearch?
 
 Full-text search is a heavily requested feature in modern applications.  Search can also be one of the most difficult features to implement competently - many popular websites have subpar search functionality that returns results slowly and has trouble finding non-exact matches.  Often, this is due to limitations in the underlying database: most standard relational databases are limited to basic `CONTAINS` or `LIKE`  SQL queries, which provide only the most basic string matching functionality.
 
 We'd like our search app to be :
-1. Fast - Search results should be returned almost instantly, in order to provide a responsive user experience.
-1. Flexible - We'll want to be able to modify how the search is performed, in order to optimize for different datasets and use cases.
-1. Forgiving -  If a search contains a typo, we'd still like to return relevant results for what the user might have been trying to search for.
-1. Full-Text - We don't want to limit our search to specific matching keywords or tags - we want to search *everything* in our datastore (including large text fields) for a match.
+1. **Fast** - Search results should be returned almost instantly, in order to provide a responsive user experience.
+1. **Flexible** - We'll want to be able to modify how the search is performed, in order to optimize for different datasets and use cases.
+1. **Forgiving** -  If a search contains a typo, we'd still like to return relevant results for what the user might have been trying to search for.
+1. **Full-Text** - We don't want to limit our search to specific matching keywords or tags - we want to search *everything* in our datastore (including large text fields) for a match.
 
 ![Elastic Search Logo](https://storage.googleapis.com/cdn.patricktriest.com/blog/images/posts/elastic-library/Elasticsearch-Logo.png)
 
@@ -54,31 +54,31 @@ Inverted indexes work in a substantially different manner.  The content of each 
   
 This inverted-index data structure allows us to very quickly find, say, all of the documents where “football” was mentioned.  Through the use of a heavily optimized in-memory inverted index, Elasticsearch enables us to perform some very powerful and customizable full-text searches on our stored data.
 
-## Project Setup
+## 2 - Project Setup
 
-### Docker
+### 2.0 - Docker
 
-We'll be using [Docker](https://www.docker.com/) to manage the environments and dependencies for this project.  Docker is a containerization engine that allows applications to be run in isolated environments, unaffected by the host operating system and local development environment.  Many web scale companies run a majority of their server infrastructure in containers now, due to the increased flexibility and composability of containerized application components.
+We'll be using [Docker](https://www.docker.com/) to manage the environments and dependencies for this project.  Docker is a containerization engine that allows applications to be run in isolated environments, unaffected by the host operating system and local development environment.  Many web-scale companies run a majority of their server infrastructure in containers now, due to the increased flexibility and composability of containerized application components.
 
 ![Docker Logo](https://storage.googleapis.com/cdn.patricktriest.com/blog/images/posts/elastic-library/docker.png)
 
 The advantage of using Docker for me, as the friendly author of this tutorial, is that the local environment setup is minimal and consistent across Windows, macOS, and Linux systems.  Instead of going through divergent installation instructions for Node.js, Elasticsearch, and Nginx, we can instead just define these dependencies in Docker configuration files, and then run our app anywhere using this configuration.  Furthermore, since each application component will run in it's own isolated container, there is much less potential for existing junk on our local machines to interfere, so "But it works on my machine!" types of scenarios will be much more rare when debugging issues.
 
-### Install Docker & Docker-Compose
+### 2.1 - Install Docker & Docker-Compose
 
 The only dependencies for this project are [Docker](https://www.docker.com/) and [docker-compose](https://docs.docker.com/compose/), the later of which is an officially supported tool for defining multiple container configurations to *compose* into a single application stack.  
 
 Install Docker - https://docs.docker.com/engine/installation/
 Install Docker Compose - https://docs.docker.com/compose/install/
 
-### Setup Project Directories
+### 2.2 - Setup Project Directories
 
 Create a base directory  (say `guttenberg_search`) for the project. To organize our project we'll work within two main subdirectories.
 
 - `/public` - Store files for the frontend Vue.js webapp.
 - `/server` - Server-side Node.js source code
 
-### Add Docker-Compose.yml
+### 2.3 - Add Docker-Compose Config
 
 Next, we'll create a `docker-compose.yml` file to define each container in our application stack.
 
@@ -129,7 +129,7 @@ volumes: # Define seperate volume for Elasticsearch data
 
 This file defines our entire application stack - no need to install Elasticsearch, Node, or Nginx on your local system.  Each container is forwarding ports to the host system (`localhost`), in order for us to access and debug the Node API, Elasticsearch instance, and fronted web app from our host machine.
 
-### Add Dockerfile
+### 2.4 - Add Dockerfile
 
 We are using official prebuilt images for Nginx and Elasticsearch, but we'll need to build our own image for the Node.js app.
 
@@ -168,9 +168,9 @@ public/
 ```
 <br>
 
-> Note that we're not to copying the `node_modules` directory into our container - this is because we'll be running `npm install` from within the container build process.  Attempting to copy the `node_modules` from the host system into a container can cause errors since some packages need to be specifically built for certain operating systems.  For instance, installing the `bcrypt` package on macOS and attempting to copy that module directly to an Ubuntu container will not work because `bcyrpt` relies on a binary that needs to be built specifically for each operating system.
+> Note that we're not copying the `node_modules` directory into our container - this is because we'll be running `npm install` from within the container build process.  Attempting to copy the `node_modules` from the host system into a container can cause errors since some packages need to be specifically built for certain operating systems.  For instance, installing the `bcrypt` package on macOS and attempting to copy that module directly to an Ubuntu container will not work because `bcyrpt` relies on a binary that needs to be built specifically for each operating system.
 
-### Add Base Files
+### 2.5 - Add Base Files
 
 In order to test out the configuration, we'll need to add some placeholder files to the app directories.
 
@@ -235,7 +235,7 @@ This file defines the application start command and the Node.js package dependen
 
 > Note - You don't have to run `npm install` - the dependencies will be installed inside the container when it is built. 
 
-### Try it Out
+### 2.6 - Try it Out
 
 Everything is in place now to test out each component of the app.  From the base directory, run `docker-compose build`, which will build our Node.js application container.  
 
@@ -278,10 +278,11 @@ Finally, visit `localhost:9200` to check that Elasticsearch is running.  It shou
 
 If all three URLs display data successfully, congrats!  The entire containerized stack is running, so now we can move on to the fun part.
 
-## Connect To Elasticsearch
+## 3 - Connect To Elasticsearch
 
 The first thing that we'll need to do in our app is connect to our local Elasticsearch instance.
 
+### 3.0 - Add ES Connection Module
 Add the following Elasticsearch initialization code to a new file `server/connection.js`.
 
 ```javascript
@@ -313,7 +314,7 @@ checkConnection()
 ```
 <br>
 
-Let's rebuild our Node app now that we've made changes, using `docker-compose build`.  Next run `docker-compose up -d` to start the application stack as a background daemon process.
+Let's rebuild our Node app now that we've made changes, using `docker-compose build`.  Next, run `docker-compose up -d` to start the application stack as a background daemon process.
 
 With the app started, run `docker exec gs-api "node" "server/connection.js"` on the command line in order to run our script within the container.  You should see some system output similar to the following.
 
@@ -338,7 +339,7 @@ With the app started, run `docker exec gs-api "node" "server/connection.js"` on 
 
 Go ahead and remove the `checkConnection()` call at the bottom before moving on, since in our final app we'll be making that call from outside the connection module.
 
-### Add Helper Function To Reset Index
+### 3.1 - Add Helper Function To Reset Index
 
 In `server/connection.js` add the following function below `checkConnection`, in order to provide an easy way to reset our Elasticsearch index.
 
@@ -355,7 +356,7 @@ async function resetIndex (index) {
 ```
 <br>
 
-### Add Book Schema
+### 3.2 - Add Book Schema
 
 Next, we'll want to add a "mapping" for the book data schema.  Add the following function below `resetIndex` in `server/connection.js`.
 
@@ -387,27 +388,28 @@ module.exports = {
 ```
 <br>
 
-## The Raw Data
+## 4 - Load The Raw Data
 
 We'll be using data from [Project Gutenberg](http://www.gutenberg.org/) - an online effort dedicated to providing free, digital copies of books within the public domain.  For this project, we'll be populating our library with 100 classic books, including texts such as *The Adventures of Sherlock Holmes*, *Treasure Island*, *The Count of Monte Cristo*, *Around the World in 80 Days*, *Romeo and Juliet*, and *The Odyssey*.
 
 ![Book Covers](https://storage.googleapis.com/cdn.patricktriest.com/blog/images/posts/elastic-library/books.jpg)
 
-### Download Book Files
+### 4.1 - Download Book Files
 
 I've zipped the 100 books into a file that you can download here - 
 https://cdn.patricktriest.com/data/books.zip
 
 Extract this file into a `books/` directory in your project.
 
-If you want, you can do this within using the following commands (requires [wget](https://www.gnu.org/software/wget/) and ["The Unarchiver" CLI](https://theunarchiver.com/command-line)).
+If you want, you can do this by using the following commands (requires [wget](https://www.gnu.org/software/wget/) and ["The Unarchiver" CLI](https://theunarchiver.com/command-line)).
 
 ```bash
 wget https://cdn.patricktriest.com/data/books.zip
 unar books.zip
 ```
+<br>
 
-### Preview A Book
+### 4.2 - Preview A Book
 
 Try opening one of the book files, say `219-0.txt`.  You'll notice that it starts with an open access license, followed by some lines identifying the book title, author, release dates, language and character encoding.
 
@@ -431,13 +433,11 @@ If you scroll to the end of the book you'll see the matching message `*** END OF
 
 In the next steps, we'll programmatically parse the book metadata from this header and extract the book content from between the `*** START OF` and `***END OF` place markers.
 
-## Data Loading
+### 4.3 - Read Data Dir
 
 Let's write a script to read the content of each book and to add that data to Elasticsearch.  We'll define a new Javascript file `server/load_data.js` in order to perform these operations.
 
-### Read Data Dir
-
-First, let's obtain a list of every file within the `books/` data directory.
+First, we'll obtain a list of every file within the `books/` data directory.
 
 Add the following content to `server/load_data.js`.
 
@@ -484,7 +484,7 @@ After this, the script will exit due to an error because we're calling a helper 
 
 ![docker exec output](https://cdn.patricktriest.com/blog/images/posts/elastic-library/sample_1_1.png)
 
-### Read Data File
+### 4.4 - Read Data File
 
 Next, we'll read the metadata and content for each book.
 
@@ -540,7 +540,7 @@ Run `docker-compose up -d --build` and `docker exec gs-api "node" "server/load_d
 
 Success!  Our script successfully parsed the title and author from the text file.  The script will again end with an error since we still have to define one more helper function.
 
-### Index Datafile in ES
+### 4.5 - Index Datafile in ES
 
 As a final step, we'll bulk-upload each array of paragraphs into the Elasticsearch index.
 
@@ -586,11 +586,11 @@ Run `docker-compose up -d --build` and `docker exec gs-api "node" "server/load_d
 
 ![data loading output](https://cdn.patricktriest.com/blog/images/posts/elastic-library/sample_3_0.png)
 
-## Querying
+## 5 - Search
 
-Now that Elasticsearch has been populated with one hundred books (amounting to roughly 230,000 paragraphs), let's try out some queries.
+Now that Elasticsearch has been populated with one hundred books (amounting to roughly 230,000 paragraphs), let's try out some search queries.
 
-### Simple HTTP Query
+### 5.0 - Simple HTTP Query
 
 First, let's just query Elasticsearch directly using it's HTTP API.
 
@@ -646,7 +646,7 @@ You should see a JSON response similar to the following.
 
 The Elasticseach HTTP interface is useful for testing that our data is inserted successfully, but exposing this API directly to the web app would be a huge security risk.  The API exposes administrative functionality (such as directly adding and deleting documents), and should ideally not ever be exposed publicly.  Instead, we'll write a simple Node.js API to receive requests from the client, and make the appropriate query (within our private local network) to Elasticsearch.
 
-### Query Script
+### 5.1 - Query Script
 
 Let's now try querying Elasticsearch from our Node.js application.
 
@@ -687,11 +687,11 @@ Here are query fields broken down -
 
 Feel free to play around with these parameters, and to customize the search query further by exploring the [Elastic Full-Text Query DSL](https://www.elastic.co/guide/en/elasticsearch/reference/current/full-text-queries.html).
 
-## API
+## 6 - API
 
 Let's write a quick HTTP API in order to access our search functionality from a frontend app.
 
-### API Server
+### 6.0 - API Server
 
 Replace our existing `server/app.js` file with the following contents.
 
@@ -740,7 +740,7 @@ app
 
 This code will import our server dependencies and set up simple logging and error handling for a [Koa.js](http://koajs.com/ Node API server.
 
-### Link endpoint with queries
+### 6.1 - Link endpoint with queries
 
 Next, we'll add an endpoint to our server in order to expose our Elasticsearch query function.
 
@@ -810,8 +810,9 @@ The result will look quite similar to the response from earlier when we called t
    }
 }
 ```
+<br>
 
-### Input validation
+### 6.2 - Input validation
 
 This endpoint is still brittle - we are not doing any checks on the request parameters, so invalid or missing values would result in a server error.
 
@@ -843,11 +844,11 @@ Now, if you restart the server and make a request with a missing term(`http://lo
 
 To view live logs from the Node app, you can run `docker-compose logs -f api`.
 
-## Front-End Application
+## 7 - Front-End Application
 
 Now that our `/search` endpoint is in place, let's wire up a simple web app to test out the API.
 
-### Vue.js App
+### 7.0 - Vue.js App
 
 We'll be using Vue.js to coordinate our frontend.
 
@@ -913,7 +914,7 @@ The app is pretty simple - we're just defining some shared data properties, and 
 
 Explaining how Vue.js works is outside the scope of this tutorial, but this probably won't look too crazy if you've used Angular or React.  If you're completely unfamiliar with Vue, and if you want something quick to get started with, I would recommend the official quick-start guide - https://vuejs.org/v2/guide/
 
-### HTML
+### 7.1 - HTML
 
 Replace our placeholder `/public/index.html` file with the following contents, in order to load our Vue.js app and to layout a basic search interface.
 
@@ -979,7 +980,7 @@ Replace our placeholder `/public/index.html` file with the following contents, i
 ```
 <br>
 
-### CSS
+### 7.2 - CSS
 
 Add a new file, `/public/styles.css`, with some custom UI styling.
 
@@ -1073,21 +1074,21 @@ body { font-family: 'EB Garamond', serif; }
 ```
 <br>
 
-### Try it out
+### 7.3 - Try it out
 
 Open `localhost:8080` in your web browser, you should see a simple search interface with paginated results.  Try typing in the top search bar to find matches from different terms.
 
 ![preview webapp](https://cdn.patricktriest.com/blog/images/posts/elastic-library/sample_4_0.png)
 
-> You **do not* have to re-run the `docker-compose up` command for the changes to take effect.  The local `public` directory is mounted to our Nginx fileserver container, so frontend changes on the local system will be automatically reflected within the containerized app.
+> You **do not* have to re-run the `docker-compose up` command for the changes to take effect.  The local `public` directory is mounted to our Nginx fileserver container, so frontend changes on the local system will be automatically reflected in the containerized app.
 
 If you try clicking on any result, nothing happens - we still have one more feature to add to the app.
 
-## Page Previews
+## 8 - Page Previews
 
 It would be nice to be able to click on each search result and view it in the context of the book that it's from.
 
-### Add Elasticsearch Query
+### 8.0 - Add Elasticsearch Query
 
 First, we'll need to define a simple query to get a range of paragraphs from a given book.
 
@@ -1114,7 +1115,7 @@ getParagraphs (bookTitle, startLocation, endLocation) {
 
 This new function will return an ordered array of paragraphs between the start and end locations of a given book.
 
-### Add API Endpoint
+### 8.1 - Add API Endpoint
 
 Now, let's link this function to an API endpoint.
 
@@ -1145,7 +1146,7 @@ router.get('/paragraphs',
 ```
 <br>
 
-### Add UI functionality
+### 8.2 - Add UI functionality
 
 Now that our new endpoint is in place, let's add some frontend functionality to query and display full pages from the book.
 
@@ -1241,15 +1242,15 @@ Congrats, you've completed the tutorial application!
 
 Feel free to compare your local result against the completed sample hosted here - https://search.patricktriest.com/
 
-## Disadvantages of Elasticsearch
+## 9 - Disadvantages of Elasticsearch
 
-### Resource Hog
+### 9.0 - Resource Hog
 
-Elasticsearch is computationally demanding.  The [official recommendation](https://www.elastic.co/guide/en/elasticsearch/guide/current/hardware.html) is to run ES on a machine with 64 GB of RAM, and they strongly discourage running it on anything with under 8 GB of RAM.  Elasticsearch is an in-memory datastore, which allows it to return results extremely quickly, but also results in a very significant system memory footprint.  In production, [it is strongly recommended to run multiple Elasticsearch nodes in a cluster](https://www.elastic.co/guide/en/elasticsearch/guide/2.x/distributed-cluster.html)  to allow for high server availability, automatic sharding, and data redundancy in case of a node failure.
+Elasticsearch is computationally demanding.  The [official recommendation](https://www.elastic.co/guide/en/elasticsearch/guide/current/hardware.html) is to run ES on a machine with 64 GB of RAM, and they strongly discourage running it on anything with under 8 GB of RAM.  Elasticsearch is an *in-memory* datastore, which allows it to return results extremely quickly, but also results in a very significant system memory footprint.  In production, [it is strongly recommended to run multiple Elasticsearch nodes in a cluster](https://www.elastic.co/guide/en/elasticsearch/guide/2.x/distributed-cluster.html)  to allow for high server availability, automatic sharding, and data redundancy in case of a node failure.
 
 I've got our tutorial application running on a $15/month GCP compute instance (at [search.patricktriest.com](https://search.patricktriest.com)) with 1.7 GB of RAM, and it is *just barely* is able to run the Elasticsearch node; sometimes the entire machine freezes up during the initial data-loading step.  Elasticsearch is, in my experience, much more of a resource hog than more traditional databases such as PostgreSQL and MongoDB, and can be significantly more expensive to host as a result.
 
-### Syncing with Databases
+### 9.1 - Syncing with Databases
 
 In most applications, storing all of the data in Elasticsearch is not an ideal option.  It is possible to use ES as the primary transactional database for an app, but this is generally not recommended due to the lack of ACID compliance in Elasticsearch, which can lead to lost write operations when ingesting data at scale.  In many cases, ES serves a more specialized role, such as powering the text searching features of the app.  This specialized use requires that some of the data from the primary database is replicated to the Elasticsearch instance.
 
@@ -1263,10 +1264,15 @@ The need to sync Elasticsearch with a primary database is more of an architectur
 
 ## Conclusion
 
+Full-text search is one of the most important features in many modern applications - and is one of the most difficult to implement well.  Elasticsearch is a fantastic option for adding fast and customizable text search to your application, but there are alternatives.  [Apache Solr](http://lucene.apache.org/solr/) is a similar open source search platform that is built on Apache Lucene - the same library at the core of Elasticsearch.  [Algolia](https://www.algolia.com/) is a search-as-a-service web platform which is growing quickly in popularity and is likely to be easier to get started with for beginners (but as a tradeoff is less customizable and can get quite expensive).
 
+"Search-bar" style features are far from the only use-case for Elasticsearch.  ES is also a very common tool for log storage and analysis, commonly used in an ELK (Elasticsearch, Logstash, Kibana) stack configuration.  The flexible full-text search allowed by Elasticsearch can also be very useful for a wide variety of data science tasks - such as correcting/standardizing the spellings of entities within a dataset or searching a large text dataset for similar phrases.
 
-### Project Ideas
-- add more of your favorite books
-- add your email - try using the aggregation engine
-- Spell Check API (using fuzzy-search with dictionary dataset)
-- journalism (searching through leaked documents)
+Here are some ideas for your own projects.
+- Add more of your favorite books to our tutorial app and create your own private library search engine.
+- Create an academic plagiarism detection engine by indexing papers from [Google Scholar](https://scholar.google.com/).
+- Build a spell checking application by indexing every word in the dictionary to Elasticsearch.
+- Build your own Google-competitor internet search engine by loading the [Common Crawl Corpus](https://aws.amazon.com/public-datasets/common-crawl/) into Elasticsearch (caution - with over 5 billion pages, this can be a very expensive dataset play with).
+- Use Elasticsearch for journalism: search for specific names and terms in recent large-scale document leaks such as the [Panama Papers](https://en.wikipedia.org/wiki/Panama_Papers) and [Paradise Papers](https://en.wikipedia.org/wiki/Paradise_Papers).
+
+I hope you enjoyed the tutorial!  Please feel free to post any thoughts, questions, or criticisms in the comments below.
