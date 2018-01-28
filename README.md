@@ -12,7 +12,7 @@ You can preview a completed version of the tutorial app here - https://search.pa
 
 ![preview webapp](https://cdn.patricktriest.com/blog/images/posts/elastic-library/sample_4_0.png)
 
-To read more, visit - [https://blog.patricktriest.com/text-search-docker-elasticsearch/]
+To read more, visit - https://blog.patricktriest.com/text-search-docker-elasticsearch/
 
 ___
 
