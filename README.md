@@ -1,7 +1,3 @@
-
-
-
-
 *How does Wikipedia sort though 5+ million articles to find the most relevant one for your research?*
 
 *How does Facebook find the friend who you're looking for (and whose name you've misspelled), across a userbase of 2+ billion people.*
@@ -16,7 +12,7 @@ You can preview a completed version of the tutorial app here - https://search.pa
 
 The source code for the application is 100% open-source and can be found at the GitHub repository here - https://github.com/triestpa/guttenberg-search
 
-Adding fast, flexible, and accurate full-text search to apps can be a challenge.  Most mainstream databases, such as [PostgreSQL](https://www.postgresql.org/) and [MongoDB](https://www.mongodb.com/), offer very basic text searching capabilities due to limitations on their existing query and index structures.  In order to high quality full-text search, a separate datastore is often the best option.  [Elasticsearch](https://www.elastic.co/) is a leading open-source datastore that is optimized to perform incredibly flexible and fast full-text search.
+Adding fast, flexible, and accurate full-text search to apps can be a challenge.  Most mainstream databases, such as [PostgreSQL](https://www.postgresql.org/) and [MongoDB](https://www.mongodb.com/), offer very basic text searching capabilities due to limitations on their existing query and index structures.  In order to implement high quality full-text search, a separate datastore is often the best option.  [Elasticsearch](https://www.elastic.co/) is a leading open-source datastore that is optimized to perform incredibly flexible and fast full-text search.
 
 We'll be using [Docker](https://www.docker.com/)  to setup our project environment and dependencies.  Docker is a containerization engine used by the likes of [Uber](https://www.uber.com/), [Spotify](https://www.spotify.com/us/), [ADP](https://www.adp.com/), and [Paypal](https://www.paypal.com/us/home).  A major advantage of building a containerized app is that the project setup is virtually the same on Windows, macOS, and Linux - which makes writing this tutorial quite a bit simpler for me.  Don't worry if you've never used Docker, we'll go through the full project configuration further down.
 
@@ -744,7 +740,7 @@ app
 ```
 <br>
 
-This code will import our server dependencies and set up simple logging and error handling for a [Koa.js](http://koajs.com/ Node API server.
+This code will import our server dependencies and set up simple logging and error handling for a [Koa.js](http://koajs.com/) Node API server.
 
 ### 6.1 - Link endpoint with queries
 
@@ -1254,7 +1250,7 @@ Feel free to compare your local result against the completed sample hosted here 
 
 Elasticsearch is computationally demanding.  The [official recommendation](https://www.elastic.co/guide/en/elasticsearch/guide/current/hardware.html) is to run ES on a machine with 64 GB of RAM, and they strongly discourage running it on anything with under 8 GB of RAM.  Elasticsearch is an *in-memory* datastore, which allows it to return results extremely quickly, but also results in a very significant system memory footprint.  In production, [it is strongly recommended to run multiple Elasticsearch nodes in a cluster](https://www.elastic.co/guide/en/elasticsearch/guide/2.x/distributed-cluster.html)  to allow for high server availability, automatic sharding, and data redundancy in case of a node failure.
 
-I've got our tutorial application running on a $15/month GCP compute instance (at [search.patricktriest.com](https://search.patricktriest.com)) with 1.7 GB of RAM, and it is *just barely* is able to run the Elasticsearch node; sometimes the entire machine freezes up during the initial data-loading step.  Elasticsearch is, in my experience, much more of a resource hog than more traditional databases such as PostgreSQL and MongoDB, and can be significantly more expensive to host as a result.
+I've got our tutorial application running on a $15/month GCP compute instance (at [search.patricktriest.com](https://search.patricktriest.com)) with 1.7 GB of RAM, and it *just barely* is able to run the Elasticsearch node; sometimes the entire machine freezes up during the initial data-loading step.  Elasticsearch is, in my experience, much more of a resource hog than more traditional databases such as PostgreSQL and MongoDB, and can be significantly more expensive to host as a result.
 
 ### 9.1 - Syncing with Databases
 
