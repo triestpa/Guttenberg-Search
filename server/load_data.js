@@ -25,7 +25,7 @@ function parseBookFile (filePath) {
     .split(/\n\s+\n/g) // Split each paragraph into it's own array entry
     .map(line => line.replace(/\r\n/g, ' ').trim()) // Remove paragraph line breaks and whitespace
     .map(line => line.replace(/_/g, '')) // Guttenberg uses "_" to signify italics.  We'll remove it, since it makes the raw text look messy.
-    .filter((line) => (line && line.length !== '')) // Remove empty lines
+    .filter((line) => (line && line !== '')) // Remove empty lines
 
   console.log(`Parsed ${paragraphs.length} Paragraphs\n`)
   return { title, author, paragraphs }
